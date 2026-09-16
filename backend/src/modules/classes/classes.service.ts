@@ -1,5 +1,6 @@
 import { AppDataSource } from "../../data-source";
 import { Classe } from "../../entities/Classe";
+import { verifierLimiteClasses } from "../abonnements/abonnements.service";
 
 export interface DonneesClasse {
   nom: string;
@@ -13,6 +14,8 @@ export interface DonneesClasse {
  */
 
 export async function creerClasse(enseignantId: string, donnees: DonneesClasse): Promise<Classe> {
+  // Vérifier la limite de classes du plan
+  await verifierLimiteClasses(enseignantId);
   const repo = AppDataSource.getRepository(Classe);
   const classe = repo.create({
     ...donnees,

@@ -4,38 +4,64 @@ import Link from "next/link";
 import { inscrire, enregistrerSession, listerMatieres, connecterAvecGoogle } from "../lib/api";
 import BoutonConnexionGoogle from "../components/BoutonConnexionGoogle";
 
+const MATIERES_FALLBACK = [
+  "Mathématiques",
+  "Français",
+  "Anglais",
+  "Espagnol",
+  "Allemand",
+  "Histoire-Géographie",
+  "Philosophie",
+  "Sciences de la Vie et de la Terre",
+  "Physique-Chimie",
+  "Éducation Physique et Sportive",
+  "Économie",
+  "EDHC",
+];
+
 export default function Inscription() {
   const router = useRouter();
   const [nom, setNom] = useState("");
   const [prenom, setPrenom] = useState("");
   const [email, setEmail] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
-  const [matieresDisponibles, setMatieresDisponibles] = useState<string[]>([]);
-  const [matiereChoisie, setMatiereChoisie] = useState("");
+  // Initialisé tout de suite avec la liste de secours
+  const [matieresDisponibles, setMatieresDisponibles] = useState<string[]>(MATIERES_FALLBACK);
+  const [matiereChoisie, setMatiereChoisie] = useState(MATIERES_FALLBACK[0]);
   const [autreMatiere, setAutreMatiere] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [chargement, setChargement] = useState(false);
 
   useEffect(() => {
-    listerMatieres().then((liste) => {
-      setMatieresDisponibles(liste);
-      if (liste.length > 0) setMatiereChoisie(liste[0]);
-    });
+    listerMatieres()
+      .then((liste) => {
+        if (liste && liste.length > 0) {
+          setMatieresDisponibles(liste);
+          setMatiereChoisie(liste[0]);
+        }
+        // Sinon on garde le fallback déjà en place
+      })
+      .catch(() => {
+        // On garde le fallback
+      });
   }, []);
 
   async function soumettreFormulaire(e: React.FormEvent) {
     e.preventDefault();
-    const nomMatiere = matiereChoisie === "__autre__" ? autreMatiere : matiereChoisie;
-    if (!nomMatiere.trim()) {
+    const nomMatiere =
+      matiereChoisie === "__autre__" ? autreMatiere.trim() : matiereChoisie;
+
+    if (!nomMatiere) {
       setErreur("Choisis ou renseigne ta matière.");
       return;
     }
+
     setErreur(null);
     setChargement(true);
     try {
       const session = await inscrire(nom, prenom, email, motDePasse, nomMatiere);
       enregistrerSession(session);
-      router.push("/classes");
+      router.push("/dashboard");
     } catch (err: any) {
       setErreur(err?.response?.data?.message || "Inscription impossible.");
     } finally {
@@ -48,7 +74,7 @@ export default function Inscription() {
     try {
       const session = await connecterAvecGoogle(credential);
       enregistrerSession(session);
-      router.push(session.enseignant.matiere ? "/classes" : "/profil");
+      router.push(session.enseignant?.matiere ? "/dashboard" : "/profil");
     } catch {
       setErreur("Inscription via Google impossible.");
     }
@@ -58,7 +84,9 @@ export default function Inscription() {
     <main className="min-h-screen bg-obsidienne text-ivoire font-landing-sans flex items-center justify-center p-6">
       <div className="w-full max-w-sm bg-obsidienne-light border border-champagne/10 rounded-[2rem] p-8">
         <p className="font-landing italic text-xl text-center mb-1">MoyennePro</p>
-        <h1 className="text-center text-ivoire/60 text-sm mb-6">Créer un compte enseignant</h1>
+        <h1 className="text-center text-ivoire/60 text-sm mb-6">
+          Créer un compte enseignant
+        </h1>
 
         <div className="flex justify-center mb-4">
           <BoutonConnexionGoogle onCredential={gererCredentialGoogle} />
@@ -87,6 +115,7 @@ export default function Inscription() {
               className="w-1/2 rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
             />
           </div>
+
           <input
             type="email"
             placeholder="Email"
@@ -95,9 +124,10 @@ export default function Inscription() {
             required
             className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
           />
+
           <input
             type="password"
-            placeholder="Mot de passe"
+            placeholder="Mot de passe (min. 8 caractères)"
             value={motDePasse}
             onChange={(e) => setMotDePasse(e.target.value)}
             required
@@ -105,17 +135,21 @@ export default function Inscription() {
             className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
           />
 
+          {/* Sélecteur de matière */}
           <select
             value={matiereChoisie}
             onChange={(e) => setMatiereChoisie(e.target.value)}
-            className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm focus:outline-none focus:border-champagne/40"
+            required
+            className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm text-ivoire focus:outline-none focus:border-champagne/40"
           >
             {matieresDisponibles.map((m) => (
-              <option key={m} value={m}>
+              <option key={m} value={m} className="bg-obsidienne text-ivoire">
                 {m}
               </option>
             ))}
-            <option value="__autre__">Autre (préciser)…</option>
+            <option value="__autre__" className="bg-obsidienne text-ivoire">
+              Autre (préciser)…
+            </option>
           </select>
 
           {matiereChoisie === "__autre__" && (
@@ -123,6 +157,7 @@ export default function Inscription() {
               placeholder="Ta matière"
               value={autreMatiere}
               onChange={(e) => setAutreMatiere(e.target.value)}
+              required
               className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
             />
           )}

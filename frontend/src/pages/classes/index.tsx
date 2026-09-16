@@ -1,9 +1,17 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { listerClasses, creerClasse, supprimerClasse, obtenirProfil, Classe } from "../../lib/api";
+import {
+  listerClasses,
+  creerClasse,
+  supprimerClasse,
+  obtenirProfil,
+  Classe,
+} from "../../lib/api";
 import { useRequireAuth } from "../../lib/useAuth";
 import Navbar from "../../components/Navbar";
+import { SkeletonCarte } from "../../components/Skeleton";
+import ModaleUpgrade from "../../components/ModaleUpgrade";
 
 export default function ListeClasses() {
   useRequireAuth();
@@ -15,6 +23,8 @@ export default function ListeClasses() {
   const [nom, setNom] = useState("");
   const [niveau, setNiveau] = useState("");
   const [anneeScolaire, setAnneeScolaire] = useState("2026-2027");
+  const [modaleUpgradeOuverte, setModaleUpgradeOuverte] = useState(false);
+  const [messageLimite, setMessageLimite] = useState("");
 
   function chargerClasses() {
     setChargement(true);
@@ -32,11 +42,20 @@ export default function ListeClasses() {
 
   async function soumettreNouvelleClasse(e: React.FormEvent) {
     e.preventDefault();
-    await creerClasse({ nom, niveau, annee_scolaire: anneeScolaire });
-    setNom("");
-    setNiveau("");
-    setAfficherFormulaire(false);
-    chargerClasses();
+    try {
+      await creerClasse({ nom, niveau, annee_scolaire: anneeScolaire });
+      setNom("");
+      setNiveau("");
+      setAfficherFormulaire(false);
+      chargerClasses();
+    } catch (err: any) {
+      if (err?.response?.status === 403 || err?.response?.data?.code === "LIMITE_CLASSES") {
+        setMessageLimite(err?.response?.data?.message || "Limite de classes atteinte.");
+        setModaleUpgradeOuverte(true);
+      } else {
+        alert(err?.response?.data?.message || "Erreur lors de la création");
+      }
+    }
   }
 
   async function gererSuppression(classeId: string) {
@@ -52,9 +71,15 @@ export default function ListeClasses() {
         <h1 className="font-landing italic text-2xl mb-5">Mes classes</h1>
 
         {chargement ? (
-          <p className="text-sm text-ivoire/50">Chargement…</p>
+          <div className="space-y-3 mb-4">
+            <SkeletonCarte />
+            <SkeletonCarte />
+            <SkeletonCarte />
+          </div>
         ) : classes.length === 0 ? (
-          <p className="text-sm text-ivoire/50 mb-4">Aucune classe pour l'instant.</p>
+          <p className="text-sm text-ivoire/50 mb-4">
+            Aucune classe pour l'instant.
+          </p>
         ) : (
           <div className="space-y-3 mb-4">
             {classes.map((classe) => (
@@ -70,7 +95,7 @@ export default function ListeClasses() {
                 </Link>
                 <button
                   onClick={() => gererSuppression(classe.id)}
-                  className="text-sm text-red-400 ml-3"
+                  className="text-sm text-red-400 ml-3 hover:text-red-300"
                 >
                   Supprimer
                 </button>
@@ -131,13 +156,18 @@ export default function ListeClasses() {
             </button>
             <Link
               href="/import"
-              className="rounded-xl border border-champagne/20 px-4 py-2 text-sm"
+              className="rounded-xl border border-champagne/20 px-4 py-2 text-sm hover:border-champagne/40 transition-colors"
             >
               Importer depuis Excel
             </Link>
           </div>
         )}
       </main>
+      <ModaleUpgrade
+        ouvert={modaleUpgradeOuverte}
+        onFermer={() => setModaleUpgradeOuverte(false)}
+        message={messageLimite}
+      />
     </div>
   );
 }

@@ -121,3 +121,46 @@ export async function confirmerPaiement(transactionId: string): Promise<void> {
   abonnement.date_fin = dateFin.toISOString().slice(0, 10);
   await abonnementRepo.save(abonnement);
 }
+
+// ========== LIMITES PAR PLAN ==========
+export const LIMITES_PLAN = {
+  [PlanAbonnement.GRATUIT]: {
+    maxClasses: 2,
+    maxPdfParMois: 5,
+  },
+  [PlanAbonnement.TRIMESTRIEL]: {
+    maxClasses: Infinity,
+    maxPdfParMois: Infinity,
+  },
+  [PlanAbonnement.ANNUEL]: {
+    maxClasses: Infinity,
+    maxPdfParMois: Infinity,
+  },
+};
+
+/**
+ * Vérifie si l'enseignant peut créer une nouvelle classe.
+ * Lance une erreur 403 si la limite du plan gratuit est atteinte.
+ */
+export async function verifierLimiteClasses(enseignantId: string): Promise<void> {
+  const abonnement = await obtenirAbonnementActif(enseignantId);
+  const limite = LIMITES_PLAN[abonnement.plan].maxClasses;
+
+  if (limite === Infinity) return;
+
+  const classeRepo = AppDataSource.getRepository(
+    (await import("../../entities/Classe")).Classe
+  );
+  const nombreClasses = await classeRepo.count({
+    where: { enseignant: { id: enseignantId } },
+  });
+
+  if (nombreClasses >= limite) {
+    const error: any = new Error(
+      `Limite atteinte : le plan Gratuit est limité à ${limite} classes. Passez à un plan payant pour en créer davantage.`
+    );
+    error.statusCode = 403;
+    error.code = "LIMITE_CLASSES";
+    throw error;
+  }
+}

@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { deconnecter, obtenirEnseignantLocal, EnseignantLocal } from "../lib/useAuth";
 
 const ONGLETS = [
+  { href: "/dashboard", label: "Tableau de bord" },
   { href: "/classes", label: "Mes classes" },
   { href: "/import", label: "Importer" },
 ];
@@ -20,8 +21,6 @@ export default function Navbar() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Lu après montage seulement : localStorage n'existe pas côté serveur,
-    // le faire dans le corps du composant provoquerait un mismatch d'hydratation.
     setEnseignant(obtenirEnseignantLocal());
   }, [router.pathname]);
 
@@ -36,7 +35,7 @@ export default function Navbar() {
   }, []);
 
   function estActif(href: string) {
-    return router.pathname === href;
+    return router.pathname === href || router.pathname.startsWith(href + "/");
   }
 
   function gererDeconnexion() {
@@ -47,7 +46,11 @@ export default function Navbar() {
   return (
     <nav className="bg-obsidienne text-ivoire sticky top-0 z-20 border-b border-champagne/10">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
-        <Link href="/classes" className="font-landing italic text-lg tracking-wide shrink-0">
+        {/* Logo → Dashboard */}
+        <Link
+          href="/dashboard"
+          className="font-landing italic text-lg tracking-wide shrink-0 hover:text-champagne transition-colors"
+        >
           MoyennePro
         </Link>
 
@@ -57,11 +60,10 @@ export default function Navbar() {
             <Link
               key={onglet.href}
               href={onglet.href}
-              className={`px-3 py-2 text-sm rounded-t-md border-b-2 transition-colors ${
-                estActif(onglet.href)
+              className={`px-3 py-2 text-sm rounded-t-md border-b-2 transition-colors ${estActif(onglet.href)
                   ? "border-champagne text-ivoire bg-obsidienne-light"
                   : "border-transparent text-ivoire/60 hover:text-ivoire hover:bg-obsidienne-light/60"
-              }`}
+                }`}
             >
               {onglet.label}
             </Link>
@@ -69,18 +71,19 @@ export default function Navbar() {
         </div>
 
         {/* Menu compte — desktop */}
-        <div className="hidden sm:block relative" ref={menuRef}>
+        <div className="relative hidden sm:block" ref={menuRef}>
           <button
             onClick={() => setMenuOuvert((v) => !v)}
-            className="w-9 h-9 rounded-full bg-champagne text-obsidienne font-semibold text-sm flex items-center justify-center hover:bg-champagne-dark transition-colors"
-            aria-label="Menu du compte"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-obsidienne-light transition-colors"
           >
-            {initiales(enseignant?.prenom, enseignant?.nom)}
+            <div className="w-8 h-8 rounded-full bg-champagne/20 border border-champagne/40 flex items-center justify-center text-xs font-semibold text-champagne">
+              {initiales(enseignant?.prenom, enseignant?.nom)}
+            </div>
           </button>
 
           {menuOuvert && (
-            <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-obsidienne-light text-ivoire shadow-lg border border-champagne/15 py-1 overflow-hidden">
-              <div className="px-4 py-3 border-b border-champagne/10">
+            <div className="absolute right-0 mt-2 w-52 rounded-xl border border-champagne/15 bg-obsidienne-light shadow-xl py-1 z-30">
+              <div className="px-4 py-2 border-b border-champagne/10">
                 <p className="text-sm font-medium">
                   {enseignant?.prenom} {enseignant?.nom}
                 </p>
@@ -90,14 +93,14 @@ export default function Navbar() {
               </div>
               <Link
                 href="/profil"
-                className="block px-4 py-2 text-sm hover:bg-champagne/10"
+                className="block px-4 py-2 text-sm hover:bg-obsidienne"
                 onClick={() => setMenuOuvert(false)}
               >
                 Mon profil
               </Link>
               <Link
                 href="/abonnement"
-                className="block px-4 py-2 text-sm hover:bg-champagne/10"
+                className="block px-4 py-2 text-sm hover:bg-obsidienne"
                 onClick={() => setMenuOuvert(false)}
               >
                 Mon abonnement
@@ -133,16 +136,17 @@ export default function Navbar() {
             <p className="text-sm font-medium">
               {enseignant?.prenom} {enseignant?.nom}
             </p>
-            <p className="text-xs text-ivoire/50">{enseignant?.matiere || "Matière non renseignée"}</p>
+            <p className="text-xs text-ivoire/50">
+              {enseignant?.matiere || "Matière non renseignée"}
+            </p>
           </div>
           {ONGLETS.map((onglet) => (
             <Link
               key={onglet.href}
               href={onglet.href}
               onClick={() => setMenuMobileOuvert(false)}
-              className={`block px-2 py-2 rounded text-sm ${
-                estActif(onglet.href) ? "bg-obsidienne text-ivoire" : "text-ivoire/80"
-              }`}
+              className={`block px-2 py-2 rounded text-sm ${estActif(onglet.href) ? "bg-obsidienne text-ivoire" : "text-ivoire/80"
+                }`}
             >
               {onglet.label}
             </Link>

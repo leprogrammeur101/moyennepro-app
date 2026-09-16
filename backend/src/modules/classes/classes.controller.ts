@@ -13,7 +13,7 @@ import {
   modifierEleve,
   supprimerEleve,
 } from "./eleves.service";
-
+import { obtenirDashboard } from "./dashboard.service";
 export const classesRouter = Router();
 classesRouter.use(exigerAuthentification);
 
@@ -114,3 +114,13 @@ classesRouter.delete(
     }
   }
 );
+
+// Dashboard
+classesRouter.get("/dashboard", async (req: RequeteAuthentifiee, res: Response) => {
+  try {
+    const data = await obtenirDashboard(req.enseignantId!);
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message || "Erreur serveur" });
+  }
+});

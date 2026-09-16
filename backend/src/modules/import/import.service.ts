@@ -3,6 +3,7 @@ import { Eleve } from "../../entities/Eleve";
 import { Classe } from "../../entities/Classe";
 import { creerClasse, obtenirClasse, DonneesClasse } from "../classes/classes.service";
 import { extraireEleves } from "../import/excel-import.service";
+import { verifierLimiteClasses } from "../abonnements/abonnements.service";
 
 export interface ResultatImport {
   classe: Classe;
@@ -27,6 +28,11 @@ export async function importerDepuisExcel(
   colonnePrenom: string,
   cible: CibleImport
 ): Promise<ResultatImport> {
+  // Si on crée une nouvelle classe, vérifier la limite AVANT de la créer
+  if (!("classeId" in cible)) {
+    await verifierLimiteClasses(enseignantId);
+  }
+
   const classe =
     "classeId" in cible
       ? await obtenirClasse(enseignantId, cible.classeId)

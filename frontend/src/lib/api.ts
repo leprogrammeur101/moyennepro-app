@@ -22,12 +22,16 @@ api.interceptors.response.use(
   (reponse) => reponse,
   (erreur) => {
     if (erreur?.response?.status === 401 && typeof window !== "undefined") {
+      const pagesPubliques = ["/", "/login", "/inscription"];
+      const estPagePublique = pagesPubliques.includes(window.location.pathname);
+
       localStorage.removeItem("token");
       localStorage.removeItem("enseignant");
-      if (window.location.pathname !== "/login" && window.location.pathname !== "/") {
+
+      if (!estPagePublique) {
         window.location.href = "/login";
       }
-      return new Promise(() => {}); // navigation en cours, on n'exécute pas les .then suivants
+      return new Promise(() => { });
     }
     return Promise.reject(erreur);
   }
@@ -316,5 +320,34 @@ export async function getResultatsClasse(
   periodeId: string
 ): Promise<ResultatClasse> {
   const { data } = await api.get(`/classes/${classeId}/periodes/${periodeId}/resultats`);
+  return data;
+}
+
+export interface DashboardData {
+  resume: {
+    nombreClasses: number;
+    nombreEleves: number;
+    periodeEnCours: string;
+  };
+  saisiesEnAttente: {
+    id: string;
+    nomDevoir: string;
+    classeNom: string;
+    classeId: string;
+    notesSaisies: number;
+    totalEleves: number;
+  }[];
+  classes: {
+    id: string;
+    nom: string;
+    niveau: string;
+    anneeScolaire: string;
+    nombreEleves: number;
+    completude: number;
+  }[];
+}
+
+export async function obtenirDashboard(): Promise<DashboardData> {
+  const { data } = await api.get("/dashboard");
   return data;
 }
