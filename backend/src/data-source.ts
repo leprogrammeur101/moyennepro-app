@@ -10,6 +10,7 @@ import { Devoir } from "./entities/Devoir";
 import { Note } from "./entities/Note";
 import { Abonnement } from "./entities/Abonnement";
 import { Paiement } from "./entities/Paiement";
+import { ExportCompteur } from "./entities/ExportCompteur";
 
 dotenv.config();
 
@@ -22,6 +23,6 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || "notes_moyenne",
   synchronize: process.env.NODE_ENV !== "production", // à désactiver en prod (utiliser des migrations)
   logging: false,
-  entities: [Enseignant, Matiere, Classe, Eleve, Periode, Devoir, Note, Abonnement, Paiement],
+  entities: [Enseignant, Matiere, Classe, Eleve, Periode, Devoir, Note, Abonnement, Paiement, ExportCompteur],
   migrations: ["src/migrations/*.ts"],
 });

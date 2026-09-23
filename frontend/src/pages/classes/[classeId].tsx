@@ -17,6 +17,8 @@ import {
 } from "../../lib/api";
 import { useRequireAuth } from "../../lib/useAuth";
 import Navbar from "../../components/Navbar";
+import { Skeleton, SkeletonTableau } from "../../components/Skeleton";
+import { useToast } from "../../components/Toast";
 
 export default function DetailClasse() {
   useRequireAuth();
@@ -35,7 +37,7 @@ export default function DetailClasse() {
   const [typeDevoir, setTypeDevoir] = useState<TypeDevoir>("DEVOIR");
   const [periodeId, setPeriodeId] = useState("");
   const [dateDevoir, setDateDevoir] = useState(new Date().toISOString().slice(0, 10));
-
+  const { showToast } = useToast();
   function chargerEleves() {
     if (!classeId) return;
     setChargementEleves(true);
@@ -61,16 +63,32 @@ export default function DetailClasse() {
   async function soumettreNouvelEleve(e: React.FormEvent) {
     e.preventDefault();
     if (!classeId) return;
-    await ajouterEleve(classeId as string, { nom, prenom });
-    setNom("");
-    setPrenom("");
-    chargerEleves();
+    try {
+      await ajouterEleve(classeId as string, { nom, prenom });
+      setNom("");
+      setPrenom("");
+      chargerEleves();
+      showToast("Élève ajouté", "success");
+    } catch (err: any) {
+      showToast(
+        err?.response?.data?.message || "Impossible d'ajouter l'élève",
+        "error"
+      );
+    }
   }
 
   async function gererSuppressionEleve(eleveId: string) {
     if (!classeId) return;
-    await supprimerEleve(classeId as string, eleveId);
-    chargerEleves();
+    try {
+      await supprimerEleve(classeId as string, eleveId);
+      chargerEleves();
+      showToast("Élève supprimé", "success");
+    } catch (err: any) {
+      showToast(
+        err?.response?.data?.message || "Impossible de supprimer l'élève",
+        "error"
+      );
+    }
   }
 
   // Créer rapidement une première période si aucune n'existe encore
@@ -88,22 +106,40 @@ export default function DetailClasse() {
   async function soumettreNouveauDevoir(e: React.FormEvent) {
     e.preventDefault();
     if (!classeId || !periodeId) return;
-    await creerDevoir(classeId as string, {
-      nom: nomDevoir,
-      type: typeDevoir,
-      periodeId,
-      date: dateDevoir,
-    });
-    setNomDevoir("");
-    setAfficherFormulaireDevoir(false);
-    chargerDevoirs();
+
+    try {
+      await creerDevoir(classeId as string, {
+        nom: nomDevoir,
+        type: typeDevoir,
+        periodeId,
+        date: dateDevoir,
+      });
+      setNomDevoir("");
+      setAfficherFormulaireDevoir(false);
+      chargerDevoirs();
+      showToast("Devoir créé", "success");
+    } catch (err: any) {
+      showToast(
+        err?.response?.data?.message || "Impossible de créer le devoir",
+        "error"
+      );
+    }
   }
 
   async function gererSuppressionDevoir(devoirId: string) {
     if (!classeId) return;
     if (!confirm("Supprimer ce devoir et toutes les notes associées ?")) return;
-    await supprimerDevoir(classeId as string, devoirId);
-    chargerDevoirs();
+
+    try {
+      await supprimerDevoir(classeId as string, devoirId);
+      chargerDevoirs();
+      showToast("Devoir supprimé", "success");
+    } catch (err: any) {
+      showToast(
+        err?.response?.data?.message || "Impossible de supprimer le devoir",
+        "error"
+      );
+    }
   }
 
   return (
@@ -138,7 +174,11 @@ export default function DetailClasse() {
         </form>
 
         {chargementEleves ? (
-          <p className="text-sm text-ivoire/50 mb-6">Chargement…</p>
+          <div className="space-y-2 mb-6">
+            <Skeleton className="h-12 w-full rounded-xl" />
+            <Skeleton className="h-12 w-full rounded-xl" />
+            <Skeleton className="h-12 w-full rounded-xl" />
+          </div>
         ) : eleves.length === 0 ? (
           <p className="text-sm text-ivoire/50 mb-6">
             Aucun élève pour l'instant — ajoute-les un par un ci-dessus, ou{" "}

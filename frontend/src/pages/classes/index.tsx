@@ -12,6 +12,7 @@ import { useRequireAuth } from "../../lib/useAuth";
 import Navbar from "../../components/Navbar";
 import { SkeletonCarte } from "../../components/Skeleton";
 import ModaleUpgrade from "../../components/ModaleUpgrade";
+import { useToast } from "../../components/Toast";
 
 export default function ListeClasses() {
   useRequireAuth();
@@ -25,6 +26,7 @@ export default function ListeClasses() {
   const [anneeScolaire, setAnneeScolaire] = useState("2026-2027");
   const [modaleUpgradeOuverte, setModaleUpgradeOuverte] = useState(false);
   const [messageLimite, setMessageLimite] = useState("");
+  const { showToast } = useToast();
 
   function chargerClasses() {
     setChargement(true);
@@ -48,20 +50,38 @@ export default function ListeClasses() {
       setNiveau("");
       setAfficherFormulaire(false);
       chargerClasses();
+      showToast("Classe créée", "success");
     } catch (err: any) {
-      if (err?.response?.status === 403 || err?.response?.data?.code === "LIMITE_CLASSES") {
-        setMessageLimite(err?.response?.data?.message || "Limite de classes atteinte.");
+      if (
+        err?.response?.status === 403 ||
+        err?.response?.data?.code === "LIMITE_CLASSES"
+      ) {
+        setMessageLimite(
+          err?.response?.data?.message ||
+            "Limite atteinte : le plan Gratuit est limité à 2 classes."
+        );
         setModaleUpgradeOuverte(true);
       } else {
-        alert(err?.response?.data?.message || "Erreur lors de la création");
+        showToast(
+          err?.response?.data?.message || "Erreur lors de la création",
+          "error"
+        );
       }
     }
   }
 
   async function gererSuppression(classeId: string) {
     if (!confirm("Supprimer cette classe et tous ses élèves ?")) return;
-    await supprimerClasse(classeId);
-    chargerClasses();
+    try {
+      await supprimerClasse(classeId);
+      chargerClasses();
+      showToast("Classe supprimée", "success");
+    } catch (err: any) {
+      showToast(
+        err?.response?.data?.message || "Impossible de supprimer la classe",
+        "error"
+      );
+    }
   }
 
   return (

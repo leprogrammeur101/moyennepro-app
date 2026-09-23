@@ -3,6 +3,8 @@ import { useRouter } from "next/router";
 import { obtenirProfil, mettreAJourProfil, listerMatieres, Profil } from "../lib/api";
 import { useRequireAuth, mettreAJourEnseignantLocal } from "../lib/useAuth";
 import Navbar from "../components/Navbar";
+import { Skeleton } from "../components/Skeleton";
+import { useToast } from "../components/Toast";
 
 export default function PageProfil() {
   useRequireAuth();
@@ -18,6 +20,7 @@ export default function PageProfil() {
   const [enregistrement, setEnregistrement] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     Promise.all([obtenirProfil(), listerMatieres()]).then(([p, matieres]) => {
@@ -42,18 +45,23 @@ export default function PageProfil() {
     setEnregistrement(true);
     try {
       const miseAJour = await mettreAJourProfil({ nom, prenom, matiere: nomMatiere });
-      mettreAJourEnseignantLocal({ nom: miseAJour.nom, prenom: miseAJour.prenom, matiere: miseAJour.matiere });
+      mettreAJourEnseignantLocal({
+        nom: miseAJour.nom,
+        prenom: miseAJour.prenom,
+        matiere: miseAJour.matiere,
+      });
 
-      // Premier rattachement de matière (venant de /login) -> direction les classes.
-      // Sinon on reste sur place avec une confirmation, l'enseignant est déjà en train de gérer son profil.
       if (!profil?.matiere) {
-        router.push("/classes");
+        router.push("/dashboard");
       } else {
         setProfil(miseAJour);
-        setConfirmation(true);
+        showToast("Profil mis à jour", "success");
       }
     } catch (err: any) {
-      setErreur(err?.response?.data?.message || "Impossible d'enregistrer le profil.");
+      showToast(
+        err?.response?.data?.message || "Impossible d'enregistrer le profil.",
+        "error"
+      );
     } finally {
       setEnregistrement(false);
     }
@@ -63,7 +71,16 @@ export default function PageProfil() {
     return (
       <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
         <Navbar />
-        <p className="p-6 text-sm text-ivoire/50">Chargement…</p>
+        <main className="p-6 max-w-xl mx-auto">
+          <Skeleton className="h-8 w-32 mb-6" />
+          <div className="space-y-4 rounded-2xl border border-champagne/10 bg-obsidienne-light p-4">
+            <Skeleton className="h-10 w-full rounded-xl" />
+            <Skeleton className="h-10 w-full rounded-xl" />
+            <Skeleton className="h-10 w-full rounded-xl" />
+            <Skeleton className="h-10 w-2/3 rounded-xl" />
+            <Skeleton className="h-11 w-36 rounded-xl mt-2" />
+          </div>
+        </main>
       </div>
     );
   }

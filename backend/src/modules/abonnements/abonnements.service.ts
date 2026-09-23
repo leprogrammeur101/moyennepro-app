@@ -2,6 +2,7 @@ import { AppDataSource } from "../../data-source";
 import { Abonnement, PlanAbonnement, StatutAbonnement } from "../../entities/Abonnement";
 import { Paiement } from "../../entities/Paiement";
 import { initierPaiementCinetPay, verifierPaiementCinetPay } from "./cinetpay.client";
+import { ExportCompteur } from "../../entities/ExportCompteur";
 
 // Tarifs validés avec Soro (voir cahier des charges §5)
 export const PRIX_PLAN: Record<PlanAbonnement, number> = {
@@ -163,4 +164,53 @@ export async function verifierLimiteClasses(enseignantId: string): Promise<void>
     error.code = "LIMITE_CLASSES";
     throw error;
   }
+}
+
+/**
+ * Vérifie la limite d'exports PDF du plan.
+ * Incrémente le compteur si OK, sinon lance une erreur 403.
+ */
+export async function verifierEtCompterExportPdf(
+  enseignantId: string
+): Promise<void> {
+  const abonnement = await obtenirAbonnementActif(enseignantId);
+  const limite = LIMITES_PLAN[abonnement.plan].maxPdfParMois;
+
+  // Plans payants : illimité
+  if (limite === Infinity) return;
+
+  const maintenant = new Date();
+  const annee = maintenant.getFullYear();
+  const mois = maintenant.getMonth() + 1; // 1–12
+
+  const repo = AppDataSource.getRepository(ExportCompteur);
+
+  let compteur = await repo.findOne({
+    where: {
+      enseignant: { id: enseignantId },
+      annee,
+      mois,
+    },
+  });
+
+  if (!compteur) {
+    compteur = repo.create({
+      enseignant: { id: enseignantId } as any,
+      annee,
+      mois,
+      nombre_exports: 0,
+    });
+  }
+
+  if (compteur.nombre_exports >= limite) {
+    const error: any = new Error(
+      `Limite atteinte : le plan Gratuit permet ${limite} exports PDF par mois. Passez à un plan payant pour des exports illimités.`
+    );
+    error.statusCode = 403;
+    error.code = "LIMITE_PDF";
+    throw error;
+  }
+
+  compteur.nombre_exports += 1;
+  await repo.save(compteur);
 }

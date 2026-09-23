@@ -10,8 +10,12 @@ import { useRequireAuth } from "../../lib/useAuth";
 import Navbar from "../../components/Navbar";
 import { Skeleton, SkeletonTableau } from "../../components/Skeleton";
 import { useToast } from "../../components/Toast";
+import {
+  ajouterNoteEnAttente,
+  synchroniserFile,
+} from "../../lib/offlineQueue";
 
-type StatutLigne = "idle" | "saving" | "saved" | "error";
+type StatutLigne = "idle" | "saving" | "saved" | "pending" | "error";
 
 export default function SaisieNotes() {
   useRequireAuth();
@@ -23,21 +27,86 @@ export default function SaisieNotes() {
   const [baremeMax, setBaremeMax] = useState(20);
   const [lignes, setLignes] = useState<LigneSaisie[]>([]);
   const [chargement, setChargement] = useState(true);
+  const [erreurChargement, setErreurChargement] = useState<string | null>(null);
   const [enregistrement, setEnregistrement] = useState(false);
   const [statuts, setStatuts] = useState<Record<string, StatutLigne>>({});
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
+  // Chargement de la grille
   useEffect(() => {
     if (!devoirId || !classeId) return;
-    obtenirGrilleSaisie(classeId as string, devoirId as string).then((grille) => {
-      setNomDevoir(grille.devoir.nom);
-      setBaremeMax(grille.devoir.baremeMax);
-      setLignes(grille.lignes);
-      setChargement(false);
-    });
+
+    setChargement(true);
+    setErreurChargement(null);
+
+    obtenirGrilleSaisie(classeId as string, devoirId as string)
+      .then((grille) => {
+        setNomDevoir(grille.devoir.nom);
+        setBaremeMax(grille.devoir.baremeMax);
+        setLignes(grille.lignes);
+      })
+      .catch((err: any) => {
+        console.error("Erreur chargement grille:", err);
+        setErreurChargement(
+          err?.response?.data?.message ||
+            "Impossible de charger la grille de saisie."
+        );
+      })
+      .finally(() => {
+        setChargement(false);
+      });
   }, [devoirId, classeId]);
+
+  // Sync offline au retour du réseau
+  // Sync offline au retour du réseau
+  useEffect(() => {
+    const cId = typeof classeId === "string" ? classeId : undefined;
+    const dId = typeof devoirId === "string" ? devoirId : undefined;
+
+    async function sync() {
+      if (!navigator.onLine || !cId || !dId) return;
+
+      try {
+        const count = await synchroniserFile(async (note) => {
+          // Ignore les notes d'autres grilles (sans les supprimer)
+          if (note.classeId !== cId || note.devoirId !== dId) {
+            return false;
+          }
+
+          await enregistrerNotes(note.classeId, note.devoirId, [
+            {
+              eleveId: note.eleveId,
+              valeur: note.valeur,
+              absent: note.absent,
+            },
+          ]);
+
+          setStatuts((prev) => ({ ...prev, [note.eleveId]: "saved" }));
+          return true;
+        });
+
+        if (count > 0) {
+          showToast(
+            `${count} note${count > 1 ? "s" : ""} synchronisée${count > 1 ? "s" : ""}`,
+            "success"
+          );
+
+          // Recharge la grille pour coller à l'état serveur
+          const grille = await obtenirGrilleSaisie(cId, dId);
+          setLignes(grille.lignes);
+        }
+      } catch (err) {
+        console.error("Erreur sync offline:", err);
+      }
+    }
+
+    window.addEventListener("online", sync);
+    sync();
+
+    return () => window.removeEventListener("online", sync);
+  }, [devoirId, classeId, showToast]);
 
   const notesSaisies = lignes.filter(
     (l) => !l.absent && l.valeur !== null && l.valeur !== undefined
@@ -46,24 +115,34 @@ export default function SaisieNotes() {
   const progression = totalEleves > 0 ? (notesSaisies / totalEleves) * 100 : 0;
   const estComplet = notesSaisies === totalEleves && totalEleves > 0;
 
-  // Sauvegarde d'une seule note
   const sauvegarderNote = useCallback(
     async (ligne: LigneSaisie) => {
       if (!devoirId || !classeId) return;
 
       setStatuts((prev) => ({ ...prev, [ligne.eleveId]: "saving" }));
 
+      const payload = {
+        eleveId: ligne.eleveId,
+        valeur: ligne.valeur ?? 0,
+        absent: ligne.absent,
+      };
+
       try {
+        if (typeof navigator !== "undefined" && !navigator.onLine) {
+          await ajouterNoteEnAttente({
+            classeId: classeId as string,
+            devoirId: devoirId as string,
+            ...payload,
+          });
+          setStatuts((prev) => ({ ...prev, [ligne.eleveId]: "pending" }));
+          return;
+        }
+
         await enregistrerNotes(classeId as string, devoirId as string, [
-          {
-            eleveId: ligne.eleveId,
-            valeur: ligne.valeur ?? 0,
-            absent: ligne.absent,
-          },
+          payload,
         ]);
         setStatuts((prev) => ({ ...prev, [ligne.eleveId]: "saved" }));
 
-        // Remet idle après 2s
         setTimeout(() => {
           setStatuts((prev) =>
             prev[ligne.eleveId] === "saved"
@@ -71,14 +150,34 @@ export default function SaisieNotes() {
               : prev
           );
         }, 2000);
-      } catch {
-        setStatuts((prev) => ({ ...prev, [ligne.eleveId]: "error" }));
+      } catch (err: any) {
+        const status = err?.response?.status;
+        const message = err?.response?.data?.message;
+
+        // Erreur de validation (note hors barème, etc.)
+        if (status && status >= 400 && status < 500) {
+          setStatuts((prev) => ({ ...prev, [ligne.eleveId]: "error" }));
+          showToast(message || "Note invalide", "error");
+          return;
+        }
+
+        // Vraie erreur réseau → file d'attente offline
+        try {
+          await ajouterNoteEnAttente({
+            classeId: classeId as string,
+            devoirId: devoirId as string,
+            ...payload,
+          });
+          setStatuts((prev) => ({ ...prev, [ligne.eleveId]: "pending" }));
+        } catch {
+          setStatuts((prev) => ({ ...prev, [ligne.eleveId]: "error" }));
+          showToast("Impossible d'enregistrer la note", "error");
+        }
       }
     },
-    [devoirId, classeId]
+    [devoirId, classeId, showToast]
   );
 
-  // Debounce 800ms
   function planifierSauvegarde(ligne: LigneSaisie) {
     const id = ligne.eleveId;
     if (debounceTimers.current[id]) {
@@ -159,7 +258,6 @@ export default function SaisieNotes() {
         }))
       );
       showToast("Toutes les notes ont été enregistrées", "success");
-      // Marque tout comme sauvé
       const nouveauxStatuts: Record<string, StatutLigne> = {};
       lignes.forEach((l) => {
         nouveauxStatuts[l.eleveId] = "saved";
@@ -179,6 +277,7 @@ export default function SaisieNotes() {
     const s = statuts[eleveId] || "idle";
     if (s === "saving") return <span className="text-ivoire/40 text-xs">💾</span>;
     if (s === "saved") return <span className="text-champagne text-xs">✓</span>;
+    if (s === "pending") return <span className="text-amber-400 text-xs">⏳</span>;
     if (s === "error") return <span className="text-red-400 text-xs">⚠</span>;
     return null;
   }
@@ -204,6 +303,29 @@ export default function SaisieNotes() {
     );
   }
 
+  if (erreurChargement) {
+    return (
+      <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
+        <Navbar />
+        <main className="p-6 max-w-xl mx-auto">
+          <Link
+            href={classeId ? `/classes/${classeId}` : "/dashboard"}
+            className="text-sm text-ivoire/50 mb-4 inline-block hover:text-champagne"
+          >
+            ← Retour
+          </Link>
+          <p className="text-red-400 text-sm mb-4">{erreurChargement}</p>
+          <button
+            onClick={() => router.reload()}
+            className="rounded-xl border border-champagne/20 px-4 py-2 text-sm hover:border-champagne/40"
+          >
+            Réessayer
+          </button>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
       <Navbar />
@@ -218,7 +340,6 @@ export default function SaisieNotes() {
         <h1 className="font-landing italic text-2xl mb-1">{nomDevoir}</h1>
         <p className="text-sm text-ivoire/50 mb-6">Noté sur {baremeMax}</p>
 
-        {/* Compteur + barre */}
         {totalEleves > 0 && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
@@ -243,7 +364,6 @@ export default function SaisieNotes() {
           </div>
         )}
 
-        {/* Tableau */}
         <table className="w-full text-sm border border-champagne/10 bg-obsidienne-light rounded-2xl overflow-hidden mb-4">
           <thead>
             <tr>
@@ -315,7 +435,7 @@ export default function SaisieNotes() {
           </tbody>
         </table>
 
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
           <button
             onClick={enregistrerTout}
             disabled={enregistrement}
@@ -326,12 +446,22 @@ export default function SaisieNotes() {
             {enregistrement ? "Enregistrement…" : "Enregistrer tout"}
           </button>
 
-          <Link
-            href={`/notes/${classeId}`}
-            className="text-sm text-ivoire/50 hover:text-champagne transition-colors self-center"
-          >
-            Voir les moyennes →
-          </Link>
+          {estComplet ? (
+            <Link
+              href={`/notes/${classeId}`}
+              className="rounded-xl border border-champagne/40 bg-champagne/10 text-champagne font-medium px-5 py-2.5 text-sm
+                         transition-all hover:bg-champagne/20 hover:scale-[1.02]"
+            >
+              Voir les moyennes et rangs →
+            </Link>
+          ) : (
+            <Link
+              href={`/notes/${classeId}`}
+              className="text-sm text-ivoire/50 hover:text-champagne transition-colors self-center"
+            >
+              Voir les moyennes (en l’état) →
+            </Link>
+          )}
         </div>
       </main>
     </div>

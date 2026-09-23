@@ -9,6 +9,8 @@ import {
 } from "../lib/api";
 import { useRequireAuth } from "../lib/useAuth";
 import Navbar from "../components/Navbar";
+import { Skeleton } from "../components/Skeleton";
+import { useToast } from "../components/Toast";
 
 const LIBELLE_PLAN: Record<PlanAbonnement, string> = {
   GRATUIT: "Gratuit",
@@ -30,6 +32,8 @@ export default function PageAbonnement() {
   const [chargement, setChargement] = useState(true);
   const [enCours, setEnCours] = useState<PlanAbonnement | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  const { showToast } = useToast();
+
 
   useEffect(() => {
     Promise.all([obtenirAbonnementActif(), listerPlansTarifs()])
@@ -47,7 +51,10 @@ export default function PageAbonnement() {
       const { paymentUrl } = await souscrireAbonnement(plan);
       window.location.href = paymentUrl; // redirection vers CinetPay (choix Orange Money/MTN/Wave)
     } catch (err: any) {
-      setErreur(err?.response?.data?.message || "Impossible d'initier le paiement.");
+      showToast(
+        err?.response?.data?.message || "Impossible d'initier le paiement.",
+        "error"
+      );
       setEnCours(null);
     }
   }
@@ -56,7 +63,14 @@ export default function PageAbonnement() {
     return (
       <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
         <Navbar />
-        <p className="p-6 text-sm text-ivoire/50">Chargement…</p>
+        <main className="p-6 max-w-xl mx-auto">
+          <Skeleton className="h-8 w-44 mb-6" />
+          <Skeleton className="h-24 w-full rounded-2xl mb-4" />
+          <div className="space-y-3">
+            <Skeleton className="h-28 w-full rounded-2xl" />
+            <Skeleton className="h-28 w-full rounded-2xl" />
+          </div>
+        </main>
       </div>
     );
   }

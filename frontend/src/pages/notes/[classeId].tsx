@@ -9,6 +9,9 @@ import {
 } from "../../lib/api";
 import { useRequireAuth } from "../../lib/useAuth";
 import Navbar from "../../components/Navbar";
+import { Skeleton, SkeletonTableau } from "../../components/Skeleton";
+import ModaleUpgrade from "../../components/ModaleUpgrade";
+import { useToast } from "../../components/Toast";
 
 export default function ResultatsClasse() {
   useRequireAuth();
@@ -20,6 +23,9 @@ export default function ResultatsClasse() {
   const [resultats, setResultats] = useState<ResultatClasse | null>(null);
   const [chargement, setChargement] = useState(true);
   const [export_, setExport] = useState(false);
+  const { showToast } = useToast();
+  const [modaleUpgradeOuverte, setModaleUpgradeOuverte] = useState(false);
+  const [messageLimite, setMessageLimite] = useState("");
 
   useEffect(() => {
     listerPeriodes().then((liste) => {
@@ -40,13 +46,33 @@ export default function ResultatsClasse() {
     if (!classeId || !periodeId) return;
     setExport(true);
     try {
-      const blob = await telechargerPdfResultats(classeId as string, periodeId);
+      const blob = await telechargerPdfResultats(
+        classeId as string,
+        periodeId
+      );
       const url = window.URL.createObjectURL(blob);
       const lien = document.createElement("a");
       lien.href = url;
       lien.download = "resultats.pdf";
       lien.click();
       window.URL.revokeObjectURL(url);
+      showToast("PDF téléchargé", "success");
+    } catch (err: any) {
+      if (
+        err?.response?.status === 403 ||
+        err?.response?.data?.code === "LIMITE_PDF"
+      ) {
+        setMessageLimite(
+          err?.response?.data?.message ||
+            "Limite de 5 exports PDF / mois atteinte."
+        );
+        setModaleUpgradeOuverte(true);
+      } else {
+        showToast(
+          err?.response?.data?.message || "Erreur lors de l'export PDF",
+          "error"
+        );
+      }
     } finally {
       setExport(false);
     }
@@ -83,7 +109,10 @@ export default function ResultatsClasse() {
         </div>
 
         {chargement ? (
-          <p className="text-sm text-ivoire/50">Chargement…</p>
+          <div>
+            <Skeleton className="h-4 w-56 mb-4" />
+            <SkeletonTableau rows={8} />
+          </div>
         ) : !resultats ? (
           <p className="text-sm text-red-400">Impossible de charger les résultats.</p>
         ) : (
@@ -130,6 +159,11 @@ export default function ResultatsClasse() {
           </>
         )}
       </main>
+      <ModaleUpgrade
+        ouvert={modaleUpgradeOuverte}
+        onFermer={() => setModaleUpgradeOuverte(false)}
+        message={messageLimite}
+      />
     </div>
   );
 }
