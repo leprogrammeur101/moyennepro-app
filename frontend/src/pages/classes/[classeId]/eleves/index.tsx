@@ -13,7 +13,6 @@ import BoutonRetour from "../../../../components/BoutonRetour";
 import { Skeleton } from "../../../../components/Skeleton";
 import { useToast } from "../../../../components/Toast";
 
-/** Normalise pour recherche : minuscules, sans accents */
 function normaliser(texte: string): string {
   return texte
     .toLowerCase()
@@ -31,6 +30,7 @@ export default function ListeElevesClasse() {
   const [recherche, setRecherche] = useState("");
   const [nom, setNom] = useState("");
   const [prenom, setPrenom] = useState("");
+  const [matricule, setMatricule] = useState("");
   const { showToast } = useToast();
 
   function charger() {
@@ -51,11 +51,13 @@ export default function ListeElevesClasse() {
     return eleves.filter((e) => {
       const nomN = normaliser(e.nom);
       const prenomN = normaliser(e.prenom);
+      const matN = normaliser(e.matricule || "");
       const complet = `${nomN} ${prenomN}`;
       const completInverse = `${prenomN} ${nomN}`;
       return (
         nomN.includes(q) ||
         prenomN.includes(q) ||
+        matN.includes(q) ||
         complet.includes(q) ||
         completInverse.includes(q)
       );
@@ -66,9 +68,14 @@ export default function ListeElevesClasse() {
     e.preventDefault();
     if (!classeId) return;
     try {
-      await ajouterEleve(classeId as string, { nom, prenom });
+      await ajouterEleve(classeId as string, {
+        nom,
+        prenom,
+        matricule: matricule.trim() || undefined,
+      });
       setNom("");
       setPrenom("");
+      setMatricule("");
       charger();
       showToast("Élève ajouté", "success");
     } catch (err: any) {
@@ -117,7 +124,7 @@ export default function ListeElevesClasse() {
         <div className="relative mb-4">
           <input
             type="search"
-            placeholder="Rechercher par nom ou prénom…"
+            placeholder="Rechercher par nom, prénom ou matricule…"
             value={recherche}
             onChange={(e) => setRecherche(e.target.value)}
             className="w-full rounded-xl bg-obsidienne-light border border-champagne/15 px-3 py-2.5 pl-9 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
@@ -144,6 +151,12 @@ export default function ListeElevesClasse() {
             value={prenom}
             onChange={(e) => setPrenom(e.target.value)}
             required
+            className="w-full sm:flex-1 min-w-0 rounded-xl bg-obsidienne-light border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
+          />
+          <input
+            placeholder="Matricule (optionnel)"
+            value={matricule}
+            onChange={(e) => setMatricule(e.target.value)}
             className="w-full sm:flex-1 min-w-0 rounded-xl bg-obsidienne-light border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
           />
           <button
@@ -184,8 +197,15 @@ export default function ListeElevesClasse() {
                   href={`/classes/${classeId}/eleves/${eleve.id}`}
                   className="flex items-center justify-between gap-3 rounded-xl border border-champagne/10 bg-obsidienne-light px-3 py-3 hover:border-champagne/30 transition-colors"
                 >
-                  <span className="text-sm font-medium min-w-0 truncate">
-                    {eleve.nom} {eleve.prenom}
+                  <span className="min-w-0 truncate">
+                    <span className="text-sm font-medium">
+                      {eleve.nom} {eleve.prenom}
+                    </span>
+                    {eleve.matricule && (
+                      <span className="block text-xs text-ivoire/45 truncate">
+                        {eleve.matricule}
+                      </span>
+                    )}
                   </span>
                   <div className="flex items-center gap-2 shrink-0">
                     <button
