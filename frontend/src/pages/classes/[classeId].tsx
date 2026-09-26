@@ -14,6 +14,7 @@ import {
 } from "../../lib/api";
 import { useRequireAuth } from "../../lib/useAuth";
 import Navbar from "../../components/Navbar";
+import BoutonRetour from "../../components/BoutonRetour";
 import { Skeleton } from "../../components/Skeleton";
 import { useToast } from "../../components/Toast";
 
@@ -117,18 +118,12 @@ export default function DetailClasse() {
     <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans overflow-x-hidden">
       <Navbar />
       <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto w-full">
-        <Link
-          href="/classes"
-          className="text-sm text-ivoire/50 mb-4 inline-block hover:text-champagne transition-colors"
-        >
-          ← Mes classes
-        </Link>
+        <BoutonRetour href="/classes" label="Mes classes" />
 
         <h1 className="font-landing italic text-xl sm:text-2xl mb-4">
           Classe
         </h1>
 
-        {/* Accès élèves */}
         <Link
           href={`/classes/${classeId}/eleves`}
           className="flex items-center justify-between gap-3 rounded-2xl border border-champagne/10 bg-obsidienne-light p-4 mb-6 hover:border-champagne/30 transition-colors"
@@ -146,7 +141,6 @@ export default function DetailClasse() {
           <span className="text-champagne text-sm shrink-0">Gérer →</span>
         </Link>
 
-        {/* --- Devoirs --- */}
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <h2 className="font-landing italic text-base sm:text-lg">
             Devoirs et interrogations
