@@ -4,6 +4,9 @@ import { Note } from "../../entities/Note";
 import { Devoir, BAREME_MAX, COEFFICIENT_PAR_TYPE } from "../../entities/Devoir";
 import { obtenirClasse } from "./classes.service";
 
+/** Format officiel : 8 chiffres + 1 lettre (ex. 12345678A) */
+const REGEX_MATRICULE = /^\d{8}[A-Z]$/;
+
 export interface DonneesEleve {
   nom: string;
   prenom: string;
@@ -36,19 +39,23 @@ export interface FicheEleve {
   moyenne: number | null;
 }
 
-/** Chaîne vide / espaces → undefined (matricule optionnel) */
-function normaliserMatricule(
+/**
+ * Vide → undefined ; sinon majuscule + contrôle format 8 chiffres + 1 lettre.
+ */
+export function normaliserMatricule(
   matricule?: string | null
 ): string | undefined {
   if (matricule === undefined || matricule === null) return undefined;
-  const t = String(matricule).trim();
-  return t === "" ? undefined : t;
+  const t = String(matricule).trim().toUpperCase();
+  if (t === "") return undefined;
+  if (!REGEX_MATRICULE.test(t)) {
+    throw new Error(
+      "Matricule invalide : 8 chiffres suivis d'une lettre (ex. 12345678A)."
+    );
+  }
+  return t;
 }
 
-/**
- * Unicité du matricule non vide dans une classe.
- * Plusieurs élèves peuvent avoir matricule null.
- */
 async function verifierMatriculeUnique(
   classeId: string,
   matricule: string | undefined,
