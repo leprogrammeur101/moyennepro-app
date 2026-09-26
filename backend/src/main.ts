@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import cookieParser from "cookie-parser";
 import * as dotenv from "dotenv";
 import { AppDataSource } from "./data-source";
 import { notesRouter } from "./modules/notes/notes.controller";
@@ -35,18 +36,10 @@ if (
 
 const app = express();
 
-// Headers de sécurité
-app.use(helmet());
-
-// CORS restreint
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
-app.use(
-  cors({
-    origin: FRONTEND_URL,
-    credentials: true,
-  })
-);
+const isProd = process.env.NODE_ENV === "production";
 
+// Headers de sécurité + CSP (un seul appel Helmet)
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -62,6 +55,28 @@ app.use(
     crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
+
+// CORS restreint (credentials pour cookies HttpOnly)
+app.use(
+  cors({
+    origin: FRONTEND_URL,
+    credentials: true,
+  })
+);
+
+app.use(express.json());
+app.use(cookieParser());
+
+// Rate-limit global (protection basique DDoS / abus)
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Trop de requêtes. Réessaie plus tard." },
+});
+app.use(globalLimiter);
+
 // Rate-limit strict sur les routes d'authentification
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -70,7 +85,6 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { message: "Trop de tentatives. Réessaie dans 15 minutes." },
 });
-
 app.use("/api/auth", authLimiter);
 
 app.use("/api", authRouter);
