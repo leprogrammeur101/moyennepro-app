@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { obtenirProfil, mettreAJourProfil, listerMatieres, Profil } from "../lib/api";
+import {
+  obtenirProfil,
+  mettreAJourProfil,
+  listerMatieres,
+  Profil,
+} from "../lib/api";
 import { useRequireAuth, mettreAJourEnseignantLocal } from "../lib/useAuth";
 import Navbar from "../components/Navbar";
+import BoutonRetour from "../components/BoutonRetour";
 import { Skeleton } from "../components/Skeleton";
 import { useToast } from "../components/Toast";
 
@@ -28,14 +34,19 @@ export default function PageProfil() {
       setNom(p.nom);
       setPrenom(p.prenom);
       setMatieresDisponibles(matieres);
-      setMatiereChoisie(p.matiere && matieres.includes(p.matiere) ? p.matiere : matieres[0] ?? "");
+      setMatiereChoisie(
+        p.matiere && matieres.includes(p.matiere)
+          ? p.matiere
+          : (matieres[0] ?? "")
+      );
       setChargement(false);
     });
   }, []);
 
   async function enregistrer(e: React.FormEvent) {
     e.preventDefault();
-    const nomMatiere = matiereChoisie === "__autre__" ? autreMatiere : matiereChoisie;
+    const nomMatiere =
+      matiereChoisie === "__autre__" ? autreMatiere : matiereChoisie;
     if (!nomMatiere.trim()) {
       setErreur("Choisis ou renseigne une matière.");
       return;
@@ -44,7 +55,11 @@ export default function PageProfil() {
     setConfirmation(false);
     setEnregistrement(true);
     try {
-      const miseAJour = await mettreAJourProfil({ nom, prenom, matiere: nomMatiere });
+      const miseAJour = await mettreAJourProfil({
+        nom,
+        prenom,
+        matiere: nomMatiere,
+      });
       mettreAJourEnseignantLocal({
         nom: miseAJour.nom,
         prenom: miseAJour.prenom,
@@ -71,7 +86,8 @@ export default function PageProfil() {
     return (
       <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
         <Navbar />
-        <main className="p-6 max-w-xl mx-auto">
+        <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto">
+          <BoutonRetour href="/dashboard" label="Tableau de bord" />
           <Skeleton className="h-8 w-32 mb-6" />
           <div className="space-y-4 rounded-2xl border border-champagne/10 bg-obsidienne-light p-4">
             <Skeleton className="h-10 w-full rounded-xl" />
@@ -88,14 +104,16 @@ export default function PageProfil() {
   return (
     <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
       <Navbar />
-      <main className="p-6 max-w-xl mx-auto">
+      <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto">
+        <BoutonRetour href="/dashboard" label="Tableau de bord" />
         <h1 className="font-landing italic text-2xl mb-1">Mon profil</h1>
         <p className="text-sm text-ivoire/50 mb-6">{profil?.email}</p>
 
         {!profil?.matiere && (
           <p className="text-sm text-champagne bg-champagne/10 border border-champagne/20 rounded-2xl p-3 mb-4">
-            Il te reste à choisir ta matière avant de continuer — un enseignant n'en enseigne qu'une
-            seule dans MoyennePro, ça détermine les classes que tu gères.
+            Il te reste à choisir ta matière avant de continuer — un enseignant
+            n'en enseigne qu'une seule dans MoyennePro, ça détermine
+            les classes que tu gères.
           </p>
         )}
 
@@ -125,7 +143,9 @@ export default function PageProfil() {
           </div>
 
           <div>
-            <label className="text-sm text-ivoire/60 block mb-1">Matière enseignée</label>
+            <label className="text-sm text-ivoire/60 block mb-1">
+              Matière enseignée
+            </label>
             <select
               value={matiereChoisie}
               onChange={(e) => setMatiereChoisie(e.target.value)}
@@ -150,7 +170,9 @@ export default function PageProfil() {
           )}
 
           {erreur && <p className="text-sm text-red-400">{erreur}</p>}
-          {confirmation && <p className="text-sm text-champagne">Profil mis à jour.</p>}
+          {confirmation && (
+            <p className="text-sm text-champagne">Profil mis à jour.</p>
+          )}
 
           <button
             type="submit"
