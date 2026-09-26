@@ -1,12 +1,12 @@
 import { Router, Request, Response } from "express";
 import { exigerAuthentification, RequeteAuthentifiee } from "../auth/auth.middleware";
-import { PlanAbonnement } from "../../entities/Abonnement";
 import {
   obtenirAbonnementActif,
   initierSouscription,
   confirmerPaiement,
   PRIX_PLAN,
 } from "./abonnements.service";
+import { parserOuErreur, schemaSouscription } from "../../lib/validation";
 
 export const abonnementsRouter = Router();
 
@@ -28,7 +28,7 @@ abonnementsRouter.post(
   exigerAuthentification,
   async (req: RequeteAuthentifiee, res: Response) => {
     try {
-      const { plan } = req.body as { plan: PlanAbonnement };
+      const { plan } = parserOuErreur(schemaSouscription, req.body);
       const resultat = await initierSouscription(req.enseignantId!, plan);
       res.json(resultat);
     } catch (err: any) {
