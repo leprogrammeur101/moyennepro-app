@@ -83,7 +83,7 @@ export async function obtenirEleve(
 
 /**
  * Fiche élève : identité + toutes les notes (filtrables par période)
- * + moyenne pondérée sur les notes retenues.
+ * + moyenne = somme(notes) / somme(coefficients).
  */
 export async function obtenirFicheEleve(
   enseignantId: string,
@@ -133,20 +133,21 @@ export async function obtenirFicheEleve(
   });
 
   // Moyenne uniquement sur les notes déjà saisies (ou absences)
+  // Formule : somme(notes) / somme(coefficients) — pas de note × coeff
   const notesPourMoyenne = notes.filter(
     (n) => n.valeur !== null || n.absent
   );
   let moyenne: number | null = null;
   if (notesPourMoyenne.length > 0) {
-    let sommePonderee = 0;
+    let sommeNotes = 0;
     let sommeCoefficients = 0;
     for (const n of notesPourMoyenne) {
       const valeur = n.absent ? 0 : Number(n.valeur);
-      sommePonderee += valeur * n.coefficient;
+      sommeNotes += valeur;
       sommeCoefficients += n.coefficient;
     }
     if (sommeCoefficients > 0) {
-      moyenne = Math.round((sommePonderee / sommeCoefficients) * 100) / 100;
+      moyenne = Math.round((sommeNotes / sommeCoefficients) * 100) / 100;
     }
   }
 
