@@ -16,19 +16,22 @@ export const schemaMotDePasse = z
 
 /**
  * Matricule : optionnel ; s'il est renseigné → 8 chiffres + 1 lettre
- * (ex. 12345678A), sans tiret. La lettre est normalisée en majuscule.
+ * (ex. 12345678A), sans tiret. Lettre normalisée en majuscule.
  */
 export const schemaMatricule = z
-  .string()
-  .trim()
-  .transform((v) => (v === "" ? undefined : v.toUpperCase()))
-  .optional()
-  .refine(
-    (v) => v === undefined || /^\d{8}[A-Z]$/.test(v),
-    {
-      message:
-        "Matricule invalide : 8 chiffres suivis d'une lettre (ex. 12345678A).",
-    }
+  .preprocess(
+    (v) => {
+      if (v === undefined || v === null || v === "") return undefined;
+      if (typeof v === "string") return v.trim().toUpperCase();
+      return v;
+    },
+    z
+      .string()
+      .regex(
+        /^\d{8}[A-Z]$/,
+        "Matricule invalide : 8 chiffres suivis d'une lettre (ex. 12345678A)."
+      )
+      .optional()
   );
 
 export const schemaInscription = z.object({
