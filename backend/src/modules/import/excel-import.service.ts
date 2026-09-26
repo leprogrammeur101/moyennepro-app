@@ -8,13 +8,23 @@ export interface LignePreview {
 export interface ResultatDetectionColonnes {
   colonneNom: string | null;
   colonnePrenom: string | null;
-  apercu: LignePreview[]; // 5 premières lignes, pour confirmation par l'enseignant
+  colonneMatricule: string | null;
+  apercu: LignePreview[];
   colonnesDisponibles: string[];
 }
 
-// Mots-clés utilisés pour la détection automatique (insensible à la casse/accents)
 const MOTS_CLES_NOM = ["nom", "nom eleve", "nom & prenoms", "nom et prenoms"];
 const MOTS_CLES_PRENOM = ["prenom", "prenoms", "prenom(s)"];
+const MOTS_CLES_MATRICULE = [
+  "matricule",
+  "mat",
+  "n° matricule",
+  "no matricule",
+  "numero",
+  "numéro",
+  "id eleve",
+  "identifiant",
+];
 
 function normaliser(texte: string): string {
   return texte
@@ -24,7 +34,9 @@ function normaliser(texte: string): string {
     .trim();
 }
 
-async function chargerPremiereFeuille(buffer: Buffer): Promise<ExcelJS.Worksheet> {
+async function chargerPremiereFeuille(
+  buffer: Buffer
+): Promise<ExcelJS.Worksheet> {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
   const feuille = workbook.worksheets[0];
@@ -51,25 +63,27 @@ function valeurCellule(cell: ExcelJS.Cell): string {
   return String(valeur).trim();
 }
 
-/**
- * Étape 1 du flow d'import : détection automatique des colonnes Nom/Prénom
- * + génération d'un aperçu des 5 premières lignes pour confirmation par
- * l'enseignant avant l'import définitif (voir cahier des charges §4.3).
- *
- * Si la détection échoue, colonneNom/colonnePrenom valent null et le
- * frontend doit proposer un mapping manuel de secours.
- */
-export async function detecterColonnes(buffer: Buffer): Promise<ResultatDetectionColonnes> {
+export async function detecterColonnes(
+  buffer: Buffer
+): Promise<ResultatDetectionColonnes> {
   const feuille = await chargerPremiereFeuille(buffer);
   const colonnesDisponibles = extraireEnTetes(feuille);
 
   const colonneNom =
-    colonnesDisponibles.find((col) => MOTS_CLES_NOM.includes(normaliser(col))) ?? null;
+    colonnesDisponibles.find((col) =>
+      MOTS_CLES_NOM.includes(normaliser(col))
+    ) ?? null;
   const colonnePrenom =
-    colonnesDisponibles.find((col) => MOTS_CLES_PRENOM.includes(normaliser(col))) ?? null;
+    colonnesDisponibles.find((col) =>
+      MOTS_CLES_PRENOM.includes(normaliser(col))
+    ) ?? null;
+  const colonneMatricule =
+    colonnesDisponibles.find((col) =>
+      MOTS_CLES_MATRICULE.includes(normaliser(col))
+    ) ?? null;
 
   const apercu: LignePreview[] = [];
-  const derniereLigne = Math.min(feuille.rowCount, 6); // en-tête + 5 lignes de données
+  const derniereLigne = Math.min(feuille.rowCount, 6);
   for (let numeroLigne = 2; numeroLigne <= derniereLigne; numeroLigne++) {
     const row = feuille.getRow(numeroLigne);
     const valeurs: Record<string, string> = {};
@@ -79,18 +93,21 @@ export async function detecterColonnes(buffer: Buffer): Promise<ResultatDetectio
     apercu.push({ ligne: numeroLigne - 1, valeurs });
   }
 
-  return { colonneNom, colonnePrenom, apercu, colonnesDisponibles };
+  return {
+    colonneNom,
+    colonnePrenom,
+    colonneMatricule,
+    apercu,
+    colonnesDisponibles,
+  };
 }
 
-/**
- * Étape 2 : import définitif une fois les colonnes confirmées (ou
- * mappées manuellement) par l'enseignant.
- */
 export async function extraireEleves(
   buffer: Buffer,
   colonneNom: string,
-  colonnePrenom: string
-): Promise<{ nom: string; prenom: string }[]> {
+  colonnePrenom: string,
+  colonneMatricule?: string | null
+): Promise<{ nom: string; prenom: string; matricule?: string }[]> {
   const feuille = await chargerPremiereFeuille(buffer);
   const colonnesDisponibles = extraireEnTetes(feuille);
 
@@ -99,15 +116,24 @@ export async function extraireEleves(
   if (indexNom === -1 || indexPrenom === -1) {
     throw new Error("Colonne Nom ou Prénom introuvable dans le fichier.");
   }
+  const indexMatricule =
+    colonneMatricule && colonneMatricule.trim()
+      ? colonnesDisponibles.indexOf(colonneMatricule)
+      : -1;
 
-  const eleves: { nom: string; prenom: string }[] = [];
+  const eleves: { nom: string; prenom: string; matricule?: string }[] = [];
   feuille.eachRow({ includeEmpty: false }, (row, numeroLigne) => {
-    if (numeroLigne === 1) return; // en-tête
+    if (numeroLigne === 1) return;
     const nom = valeurCellule(row.getCell(indexNom + 1));
     const prenom = valeurCellule(row.getCell(indexPrenom + 1));
-    if (nom !== "" || prenom !== "") {
-      eleves.push({ nom, prenom });
+    if (nom === "" && prenom === "") return;
+
+    let matricule: string | undefined;
+    if (indexMatricule >= 0) {
+      const m = valeurCellule(row.getCell(indexMatricule + 1));
+      if (m) matricule = m;
     }
+    eleves.push({ nom, prenom, matricule });
   });
 
   return eleves;
