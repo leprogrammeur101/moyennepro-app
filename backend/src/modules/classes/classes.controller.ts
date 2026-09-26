@@ -15,6 +15,7 @@ import {
   listerEleves,
   modifierEleve,
   supprimerEleve,
+  obtenirFicheEleve,
 } from "./eleves.service";
 import { obtenirDashboard } from "./dashboard.service";
 import {
@@ -72,7 +73,6 @@ classesRouter.put(
   "/classes/:classeId",
   async (req: RequeteAuthentifiee, res: Response) => {
     try {
-      // Partial : seuls les champs fournis sont validés
       const donnees = parserOuErreur(schemaClasse.partial(), req.body);
       const classe = await modifierClasse(
         req.enseignantId!,
@@ -128,6 +128,28 @@ classesRouter.get(
         req.params.classeId
       );
       res.json(eleves);
+    } catch (err: any) {
+      res.status(404).json({ message: err.message });
+    }
+  }
+);
+
+// Fiche élève + notes (optionnellement filtrées par période)
+classesRouter.get(
+  "/classes/:classeId/eleves/:eleveId",
+  async (req: RequeteAuthentifiee, res: Response) => {
+    try {
+      const periodeId =
+        typeof req.query.periodeId === "string"
+          ? req.query.periodeId
+          : undefined;
+      const fiche = await obtenirFicheEleve(
+        req.enseignantId!,
+        req.params.classeId,
+        req.params.eleveId,
+        periodeId
+      );
+      res.json(fiche);
     } catch (err: any) {
       res.status(404).json({ message: err.message });
     }
