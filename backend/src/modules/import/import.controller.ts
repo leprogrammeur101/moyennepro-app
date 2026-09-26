@@ -8,8 +8,8 @@ import { detecterColonnes } from "./excel-import.service";
 import { importerDepuisExcel, CibleImport } from "./import.service";
 
 const MIMES_AUTORISES = new Set([
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
-  "application/vnd.ms-excel", // .xls
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
   "text/csv",
   "application/csv",
 ]);
@@ -18,7 +18,7 @@ const EXTENSIONS_AUTORISEES = /\.(xlsx|xls|csv)$/i;
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 Mo
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const mimeOk = MIMES_AUTORISES.has(file.mimetype);
     const extOk = EXTENSIONS_AUTORISEES.test(file.originalname);
@@ -37,7 +37,6 @@ const upload = multer({
 export const importRouter = Router();
 importRouter.use(exigerAuthentification);
 
-// Middleware pour transformer les erreurs multer en JSON propre
 function gererErreurUpload(
   err: any,
   _req: RequeteAuthentifiee,
@@ -58,7 +57,6 @@ function gererErreurUpload(
   next();
 }
 
-// Étape 1 : analyse du fichier, détection auto des colonnes + aperçu
 importRouter.post(
   "/import/detecter-colonnes",
   (req, res, next) => {
@@ -80,7 +78,6 @@ importRouter.post(
   }
 );
 
-// Étape 2 : import définitif une fois les colonnes confirmées/mappées
 importRouter.post(
   "/import/confirmer",
   (req, res, next) => {
@@ -100,6 +97,7 @@ importRouter.post(
         annee_scolaire,
         colonneNom,
         colonnePrenom,
+        colonneMatricule,
       } = req.body;
 
       if (!colonneNom || !colonnePrenom) {
@@ -125,7 +123,8 @@ importRouter.post(
         req.file.buffer,
         colonneNom,
         colonnePrenom,
-        cible
+        cible,
+        colonneMatricule || null
       );
       res.status(201).json(resultat);
     } catch (err: any) {
