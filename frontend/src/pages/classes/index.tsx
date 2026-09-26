@@ -10,6 +10,7 @@ import {
 } from "../../lib/api";
 import { useRequireAuth } from "../../lib/useAuth";
 import Navbar from "../../components/Navbar";
+import BoutonRetour from "../../components/BoutonRetour";
 import { SkeletonCarte } from "../../components/Skeleton";
 import ModaleUpgrade from "../../components/ModaleUpgrade";
 import { useToast } from "../../components/Toast";
@@ -88,6 +89,7 @@ export default function ListeClasses() {
     <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans overflow-x-hidden">
       <Navbar />
       <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto w-full">
+        <BoutonRetour href="/dashboard" label="Tableau de bord" />
         <h1 className="font-landing italic text-xl sm:text-2xl mb-5">
           Mes classes
         </h1>
