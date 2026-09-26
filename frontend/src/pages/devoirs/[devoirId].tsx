@@ -442,7 +442,14 @@ export default function SaisieNotes() {
                   `}
                   >
                     <td className="px-3 py-2.5">
-                      {ligne.nom} {ligne.prenom}
+                      <span className="block">
+                        {ligne.nom} {ligne.prenom}
+                      </span>
+                      {ligne.matricule && (
+                        <span className="text-xs text-ivoire/45">
+                          {ligne.matricule}
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-2.5">
                       <input
