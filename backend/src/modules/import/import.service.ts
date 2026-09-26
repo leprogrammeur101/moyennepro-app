@@ -1,7 +1,11 @@
 import { AppDataSource } from "../../data-source";
 import { Eleve } from "../../entities/Eleve";
 import { Classe } from "../../entities/Classe";
-import { creerClasse, obtenirClasse, DonneesClasse } from "../classes/classes.service";
+import {
+  creerClasse,
+  obtenirClasse,
+  DonneesClasse,
+} from "../classes/classes.service";
 import { extraireEleves } from "../import/excel-import.service";
 import { verifierLimiteClasses } from "../abonnements/abonnements.service";
 
@@ -10,25 +14,18 @@ export interface ResultatImport {
   nombreElevesImportes: number;
 }
 
-export type CibleImport = { classeId: string } | { donneesClasse: DonneesClasse };
+export type CibleImport =
+  | { classeId: string }
+  | { donneesClasse: DonneesClasse };
 
-/**
- * Étape 2 du flow d'import (voir cahier des charges §2.1 et §4.3) : insère
- * en masse les élèves extraits du fichier Excel, une fois les colonnes
- * Nom/Prénom confirmées (ou mappées manuellement) par l'enseignant.
- *
- * Deux cibles possibles : importer dans une classe déjà existante
- * (obtenirClasse vérifie déjà qu'elle appartient à l'enseignant), ou
- * créer une nouvelle classe à la volée.
- */
 export async function importerDepuisExcel(
   enseignantId: string,
   buffer: Buffer,
   colonneNom: string,
   colonnePrenom: string,
-  cible: CibleImport
+  cible: CibleImport,
+  colonneMatricule?: string | null
 ): Promise<ResultatImport> {
-  // Si on crée une nouvelle classe, vérifier la limite AVANT de la créer
   if (!("classeId" in cible)) {
     await verifierLimiteClasses(enseignantId);
   }
@@ -38,13 +35,50 @@ export async function importerDepuisExcel(
       ? await obtenirClasse(enseignantId, cible.classeId)
       : await creerClasse(enseignantId, cible.donneesClasse);
 
-  const elevesExtraits = await extraireEleves(buffer, colonneNom, colonnePrenom);
+  const elevesExtraits = await extraireEleves(
+    buffer,
+    colonneNom,
+    colonnePrenom,
+    colonneMatricule
+  );
   if (elevesExtraits.length === 0) {
-    throw new Error("Aucun élève trouvé dans le fichier avec les colonnes sélectionnées.");
+    throw new Error(
+      "Aucun élève trouvé dans le fichier avec les colonnes sélectionnées."
+    );
   }
 
+  // Unicité des matricules dans le fichier + dans la classe existante
   const repo = AppDataSource.getRepository(Eleve);
-  const eleves = elevesExtraits.map((e) => repo.create({ ...e, classe }));
+  const existants = await repo.find({ where: { classe: { id: classe.id } } });
+  const matriculesExistants = new Set(
+    existants.map((e) => e.matricule).filter(Boolean) as string[]
+  );
+  const vusDansFichier = new Set<string>();
+
+  for (const e of elevesExtraits) {
+    const m = e.matricule?.trim();
+    if (!m) continue;
+    if (vusDansFichier.has(m)) {
+      throw new Error(
+        `Matricule en double dans le fichier : « ${m} ».`
+      );
+    }
+    if (matriculesExistants.has(m)) {
+      throw new Error(
+        `Le matricule « ${m} » existe déjà dans cette classe.`
+      );
+    }
+    vusDansFichier.add(m);
+  }
+
+  const eleves = elevesExtraits.map((e) =>
+    repo.create({
+      nom: e.nom,
+      prenom: e.prenom,
+      matricule: e.matricule?.trim() || undefined,
+      classe,
+    })
+  );
   await repo.save(eleves);
 
   return { classe, nombreElevesImportes: eleves.length };
