@@ -142,8 +142,15 @@ export default function ResultatsClasse() {
                   key={r.eleveId}
                   className="rounded-xl border border-champagne/10 bg-obsidienne-light px-4 py-3 flex items-center justify-between gap-3"
                 >
-                  <span className="text-sm font-medium min-w-0 truncate">
-                    {r.nom} {r.prenom}
+                  <span className="min-w-0 truncate">
+                    <span className="text-sm font-medium">
+                      {r.nom} {r.prenom}
+                    </span>
+                    {r.matricule && (
+                      <span className="block text-xs text-ivoire/45">
+                        {r.matricule}
+                      </span>
+                    )}
                   </span>
                   <div className="flex items-center gap-4 text-sm shrink-0">
                     <span className="text-ivoire/70">{r.moyenne ?? "—"}</span>
@@ -180,7 +187,14 @@ export default function ResultatsClasse() {
                   {resultats.resultats.map((r) => (
                     <tr key={r.eleveId}>
                       <td className="border-b border-champagne/5 px-3 py-2">
-                        {r.nom} {r.prenom}
+                        <span className="block">
+                          {r.nom} {r.prenom}
+                        </span>
+                        {r.matricule && (
+                          <span className="text-xs text-ivoire/45">
+                            {r.matricule}
+                          </span>
+                        )}
                       </td>
                       <td className="border-b border-champagne/5 px-3 py-2">
                         {r.moyenne ?? "—"}
