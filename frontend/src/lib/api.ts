@@ -6,9 +6,6 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// Si la session cookie est absente, invalide ou expirée, le backend répond 401 —
-// on déconnecte proprement et on redirige vers /login au lieu de laisser
-// chaque page planter sur une erreur non gérée.
 api.interceptors.response.use(
   (reponse) => reponse,
   (erreur) => {
@@ -17,7 +14,6 @@ api.interceptors.response.use(
       const estPagePublique = pagesPubliques.includes(window.location.pathname);
 
       localStorage.removeItem("enseignant");
-      // Nettoyage legacy (anciennes sessions avec token en localStorage)
       localStorage.removeItem("token");
 
       if (!estPagePublique) {
@@ -103,12 +99,11 @@ export async function connecterAvecGoogle(
   return data;
 }
 
-/** Déconnexion côté serveur (efface le cookie HttpOnly) + nettoyage local */
 export async function deconnecterApi(): Promise<void> {
   try {
     await api.post("/auth/logout");
   } catch {
-    // Ignorer : on nettoie quand même le cache local
+    // Ignorer
   }
 }
 
@@ -219,6 +214,7 @@ export interface LigneSaisie {
   eleveId: string;
   nom: string;
   prenom: string;
+  matricule?: string | null;
   valeur: number | null;
   absent: boolean;
 }
@@ -281,6 +277,7 @@ export async function enregistrerNotes(
 export interface ApercuColonnes {
   colonneNom: string | null;
   colonnePrenom: string | null;
+  colonneMatricule: string | null;
   colonnesDisponibles: string[];
   apercu: { ligne: number; valeurs: Record<string, string> }[];
 }
@@ -308,12 +305,16 @@ export async function confirmerImportExcel(
   fichier: File,
   colonneNom: string,
   colonnePrenom: string,
-  cible: CibleImport
+  cible: CibleImport,
+  colonneMatricule?: string | null
 ): Promise<{ classe: Classe; nombreElevesImportes: number }> {
   const formData = new FormData();
   formData.append("fichier", fichier);
   formData.append("colonneNom", colonneNom);
   formData.append("colonnePrenom", colonnePrenom);
+  if (colonneMatricule) {
+    formData.append("colonneMatricule", colonneMatricule);
+  }
   if ("classeId" in cible) {
     formData.append("classeId", cible.classeId);
   } else {
@@ -369,10 +370,8 @@ export async function souscrireAbonnement(
   return data;
 }
 
-/** Stocke uniquement les infos enseignant (pas le JWT — il est en cookie HttpOnly) */
 export function enregistrerSession(session: SessionAuth) {
   localStorage.setItem("enseignant", JSON.stringify(session.enseignant));
-  // Nettoyage legacy
   localStorage.removeItem("token");
 }
 
@@ -380,6 +379,7 @@ export interface ResultatEleve {
   eleveId: string;
   nom: string;
   prenom: string;
+  matricule?: string | null;
   moyenne: number | null;
   rang: number | null;
 }
