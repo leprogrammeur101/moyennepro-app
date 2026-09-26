@@ -8,6 +8,7 @@ import {
 } from "../../lib/api";
 import { useRequireAuth } from "../../lib/useAuth";
 import Navbar from "../../components/Navbar";
+import BoutonRetour from "../../components/BoutonRetour";
 import { Skeleton, SkeletonTableau } from "../../components/Skeleton";
 import { useToast } from "../../components/Toast";
 import {
@@ -38,7 +39,6 @@ export default function SaisieNotes() {
   );
   const syncEnCours = useRef(false);
 
-  // Chargement de la grille
   useEffect(() => {
     if (!devoirId || !classeId) return;
 
@@ -63,7 +63,6 @@ export default function SaisieNotes() {
       });
   }, [devoirId, classeId]);
 
-  // Restaure les statuts pending depuis IndexedDB + sync si online
   useEffect(() => {
     const cId = typeof classeId === "string" ? classeId : undefined;
     const dId = typeof devoirId === "string" ? devoirId : undefined;
@@ -72,7 +71,6 @@ export default function SaisieNotes() {
     let cancelled = false;
 
     async function restaurerEtSync() {
-      // 1. Afficher ⏳ pour les notes encore en file
       try {
         const pending = await listerNotesPourDevoir(cId!, dId!);
         if (cancelled) return;
@@ -89,7 +87,6 @@ export default function SaisieNotes() {
         console.error("Lecture file offline:", e);
       }
 
-      // 2. Si online → synchroniser
       if (!navigator.onLine) return;
       await lancerSync(cId!, dId!);
     }
@@ -131,7 +128,6 @@ export default function SaisieNotes() {
             `${synced.length} note${synced.length > 1 ? "s" : ""} synchronisée${synced.length > 1 ? "s" : ""}`,
             "success"
           );
-          // Aligne l'UI sur le serveur
           const grille = await obtenirGrilleSaisie(cId, dId);
           if (!cancelled) setLignes(grille.lignes);
         }
@@ -208,14 +204,12 @@ export default function SaisieNotes() {
         const status = err?.response?.status;
         const message = err?.response?.data?.message;
 
-        // Erreur de validation (note hors barème, etc.)
         if (status && status >= 400 && status < 500) {
           setStatuts((prev) => ({ ...prev, [ligne.eleveId]: "error" }));
           showToast(message || "Note invalide", "error");
           return;
         }
 
-        // Vraie erreur réseau → file d'attente offline
         try {
           await ajouterNoteEnAttente({
             classeId: classeId as string,
@@ -342,7 +336,7 @@ export default function SaisieNotes() {
     return (
       <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
         <Navbar />
-        <main className="p-6 max-w-xl mx-auto">
+        <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto">
           <Skeleton className="h-4 w-32 mb-6" />
           <Skeleton className="h-8 w-52 mb-2" />
           <Skeleton className="h-4 w-24 mb-6" />
@@ -363,13 +357,11 @@ export default function SaisieNotes() {
     return (
       <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
         <Navbar />
-        <main className="p-6 max-w-xl mx-auto">
-          <Link
+        <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto">
+          <BoutonRetour
             href={classeId ? `/classes/${classeId}` : "/dashboard"}
-            className="text-sm text-ivoire/50 mb-4 inline-block hover:text-champagne"
-          >
-            ← Retour
-          </Link>
+            label="Retour"
+          />
           <p className="text-red-400 text-sm mb-4">{erreurChargement}</p>
           <button
             onClick={() => router.reload()}
@@ -383,15 +375,13 @@ export default function SaisieNotes() {
   }
 
   return (
-    <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
+    <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans overflow-x-hidden">
       <Navbar />
-      <main className="p-6 max-w-xl mx-auto">
-        <Link
+      <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto">
+        <BoutonRetour
           href={`/classes/${classeId}`}
-          className="text-sm text-ivoire/50 mb-4 inline-block hover:text-champagne transition-colors"
-        >
-          ← Retour à la classe
-        </Link>
+          label="Retour à la classe"
+        />
 
         <h1 className="font-landing italic text-2xl mb-1">{nomDevoir}</h1>
         <p className="text-sm text-ivoire/50 mb-6">Noté sur {baremeMax}</p>
@@ -517,7 +507,7 @@ export default function SaisieNotes() {
               href={`/notes/${classeId}`}
               className="text-sm text-ivoire/50 hover:text-champagne transition-colors self-center"
             >
-              Voir les moyennes (en l’état) →
+              Voir les moyennes (en l'état) →
             </Link>
           )}
         </div>
