@@ -1,28 +1,30 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
+import { deconnecterApi } from "./api";
 
 /**
  * À appeler en tête des pages qui nécessitent une connexion. Redirige
- * vers /login si aucun token n'est présent (vérification simple côté
- * client — la vraie protection reste côté backend via exigerAuthentification).
+ * vers /login si aucun cache enseignant n'est présent (vérification simple
+ * côté client — la vraie protection reste le cookie HttpOnly + middleware backend).
  */
 export function useRequireAuth() {
   const router = useRouter();
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !localStorage.getItem("token")) {
+    if (typeof window !== "undefined" && !localStorage.getItem("enseignant")) {
       router.replace("/login");
     }
   }, [router]);
 }
 
 export function estConnecte(): boolean {
-  return typeof window !== "undefined" && !!localStorage.getItem("token");
+  return typeof window !== "undefined" && !!localStorage.getItem("enseignant");
 }
 
-export function deconnecter() {
-  localStorage.removeItem("token");
+export async function deconnecter() {
+  await deconnecterApi();
   localStorage.removeItem("enseignant");
+  localStorage.removeItem("token"); // legacy
 }
 
 export interface EnseignantLocal {
