@@ -9,6 +9,7 @@ import {
 } from "../lib/api";
 import { useRequireAuth } from "../lib/useAuth";
 import Navbar from "../components/Navbar";
+import BoutonRetour from "../components/BoutonRetour";
 import { Skeleton } from "../components/Skeleton";
 import { useToast } from "../components/Toast";
 
@@ -34,7 +35,6 @@ export default function PageAbonnement() {
   const [erreur, setErreur] = useState<string | null>(null);
   const { showToast } = useToast();
 
-
   useEffect(() => {
     Promise.all([obtenirAbonnementActif(), listerPlansTarifs()])
       .then(([a, p]) => {
@@ -49,7 +49,7 @@ export default function PageAbonnement() {
     setEnCours(plan);
     try {
       const { paymentUrl } = await souscrireAbonnement(plan);
-      window.location.href = paymentUrl; // redirection vers CinetPay (choix Orange Money/MTN/Wave)
+      window.location.href = paymentUrl;
     } catch (err: any) {
       showToast(
         err?.response?.data?.message || "Impossible d'initier le paiement.",
@@ -63,7 +63,8 @@ export default function PageAbonnement() {
     return (
       <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
         <Navbar />
-        <main className="p-6 max-w-xl mx-auto">
+        <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto">
+          <BoutonRetour href="/dashboard" label="Tableau de bord" />
           <Skeleton className="h-8 w-44 mb-6" />
           <Skeleton className="h-24 w-full rounded-2xl mb-4" />
           <div className="space-y-3">
@@ -78,7 +79,8 @@ export default function PageAbonnement() {
   return (
     <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
       <Navbar />
-      <main className="p-6 max-w-xl mx-auto">
+      <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto">
+        <BoutonRetour href="/dashboard" label="Tableau de bord" />
         <h1 className="font-landing italic text-2xl mb-4">Mon abonnement</h1>
 
         {abonnement && (
@@ -104,7 +106,9 @@ export default function PageAbonnement() {
               >
                 <div>
                   <p className="font-medium">{LIBELLE_PLAN[p.plan]}</p>
-                  <p className="text-sm text-ivoire/50">{p.prix.toLocaleString("fr-FR")} FCFA</p>
+                  <p className="text-sm text-ivoire/50">
+                    {p.prix.toLocaleString("fr-FR")} FCFA
+                  </p>
                 </div>
                 <button
                   onClick={() => gererSouscription(p.plan)}
@@ -114,15 +118,16 @@ export default function PageAbonnement() {
                   {enCours === p.plan
                     ? "Redirection…"
                     : abonnement?.plan === p.plan
-                    ? "Plan actuel"
-                    : "Souscrire"}
+                      ? "Plan actuel"
+                      : "Souscrire"}
                 </button>
               </div>
             ))}
         </div>
 
         <p className="text-xs text-ivoire/30 mt-6">
-          Le paiement s'effectue via Mobile Money (Orange Money, MTN Money, Wave) sur la page sécurisée CinetPay.
+          Le paiement s'effectue via Mobile Money (Orange Money, MTN Money,
+          Wave) sur la page sécurisée CinetPay.
         </p>
       </main>
     </div>
