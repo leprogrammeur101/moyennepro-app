@@ -2,13 +2,19 @@ import { Router, Response } from "express";
 import { exigerAuthentification, RequeteAuthentifiee } from "../auth/auth.middleware";
 import { creerDevoir, listerDevoirs, supprimerDevoir } from "./devoirs.service";
 import { obtenirGrilleSaisie, enregistrerNotes } from "./saisie.service";
+import {
+  parserOuErreur,
+  schemaDevoir,
+  schemaEnregistrementNotes,
+} from "../../lib/validation";
 
 export const devoirsRouter = Router();
 devoirsRouter.use(exigerAuthentification);
 
 devoirsRouter.post("/classes/:classeId/devoirs", async (req: RequeteAuthentifiee, res: Response) => {
   try {
-    const devoir = await creerDevoir(req.enseignantId!, req.params.classeId, req.body);
+    const donnees = parserOuErreur(schemaDevoir, req.body);
+    const devoir = await creerDevoir(req.enseignantId!, req.params.classeId, donnees);
     res.status(201).json(devoir);
   } catch (err: any) {
     res.status(400).json({ message: err.message });
@@ -63,11 +69,12 @@ devoirsRouter.put(
   "/classes/:classeId/devoirs/:devoirId/notes",
   async (req: RequeteAuthentifiee, res: Response) => {
     try {
+      const { notes } = parserOuErreur(schemaEnregistrementNotes, req.body);
       await enregistrerNotes(
         req.enseignantId!,
         req.params.classeId,
         req.params.devoirId,
-        req.body.notes
+        notes
       );
       res.json({ message: "Notes enregistrées." });
     } catch (err: any) {
