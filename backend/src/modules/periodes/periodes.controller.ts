@@ -1,13 +1,15 @@
 import { Router, Response } from "express";
 import { exigerAuthentification, RequeteAuthentifiee } from "../auth/auth.middleware";
 import { creerPeriode, listerPeriodes } from "./periodes.service";
+import { parserOuErreur, schemaPeriode } from "../../lib/validation";
 
 export const periodesRouter = Router();
 periodesRouter.use(exigerAuthentification);
 
 periodesRouter.post("/periodes", async (req: RequeteAuthentifiee, res: Response) => {
   try {
-    const periode = await creerPeriode(req.body);
+    const donnees = parserOuErreur(schemaPeriode, req.body);
+    const periode = await creerPeriode(donnees);
     res.status(201).json(periode);
   } catch (err: any) {
     res.status(400).json({ message: err.message });
