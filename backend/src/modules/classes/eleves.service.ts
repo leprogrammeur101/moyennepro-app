@@ -36,11 +36,35 @@ export interface FicheEleve {
   moyenne: number | null;
 }
 
+/** Chaîne vide / espaces → undefined (matricule optionnel) */
+function normaliserMatricule(
+  matricule?: string | null
+): string | undefined {
+  if (matricule === undefined || matricule === null) return undefined;
+  const t = String(matricule).trim();
+  return t === "" ? undefined : t;
+}
+
 /**
- * obtenirClasse() vérifie déjà que la classe appartient bien à
- * l'enseignant connecté — on s'appuie dessus avant toute opération
- * sur les élèves pour éviter qu'un enseignant touche la classe d'un autre.
+ * Unicité du matricule non vide dans une classe.
+ * Plusieurs élèves peuvent avoir matricule null.
  */
+async function verifierMatriculeUnique(
+  classeId: string,
+  matricule: string | undefined,
+  eleveIdExclu?: string
+): Promise<void> {
+  if (!matricule) return;
+  const repo = AppDataSource.getRepository(Eleve);
+  const existant = await repo.findOne({
+    where: { classe: { id: classeId }, matricule },
+  });
+  if (existant && existant.id !== eleveIdExclu) {
+    throw new Error(
+      `Le matricule « ${matricule} » est déjà utilisé par un élève de cette classe.`
+    );
+  }
+}
 
 export async function ajouterEleve(
   enseignantId: string,
@@ -48,8 +72,16 @@ export async function ajouterEleve(
   donnees: DonneesEleve
 ): Promise<Eleve> {
   const classe = await obtenirClasse(enseignantId, classeId);
+  const matricule = normaliserMatricule(donnees.matricule);
+  await verifierMatriculeUnique(classeId, matricule);
+
   const repo = AppDataSource.getRepository(Eleve);
-  const eleve = repo.create({ ...donnees, classe });
+  const eleve = repo.create({
+    nom: donnees.nom,
+    prenom: donnees.prenom,
+    matricule,
+    classe,
+  });
   return repo.save(eleve);
 }
 
@@ -81,10 +113,6 @@ export async function obtenirEleve(
   return eleve;
 }
 
-/**
- * Fiche élève : identité + toutes les notes (filtrables par période)
- * + moyenne = somme(notes) / somme(coefficients).
- */
 export async function obtenirFicheEleve(
   enseignantId: string,
   classeId: string,
@@ -132,8 +160,6 @@ export async function obtenirFicheEleve(
     };
   });
 
-  // Moyenne uniquement sur les notes déjà saisies (ou absences)
-  // Formule : somme(notes) / somme(coefficients) — pas de note × coeff
   const notesPourMoyenne = notes.filter(
     (n) => n.valeur !== null || n.absent
   );
@@ -178,7 +204,15 @@ export async function modifierEleve(
   if (!eleve) {
     throw new Error("Élève introuvable dans cette classe.");
   }
-  Object.assign(eleve, donnees);
+
+  if (donnees.nom !== undefined) eleve.nom = donnees.nom;
+  if (donnees.prenom !== undefined) eleve.prenom = donnees.prenom;
+  if (donnees.matricule !== undefined) {
+    const matricule = normaliserMatricule(donnees.matricule);
+    await verifierMatriculeUnique(classeId, matricule, eleveId);
+    eleve.matricule = matricule;
+  }
+
   return repo.save(eleve);
 }
 
