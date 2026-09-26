@@ -83,7 +83,8 @@ export default function ResultatsClasse() {
       <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
         <Navbar />
         <p className="p-6 text-sm text-ivoire/50">
-          Aucune période créée pour l'instant — crée-en une depuis la page de la classe.
+          Aucune période créée pour l'instant — crée-en une depuis la page de
+          la classe.
         </p>
       </div>
     );
@@ -114,40 +115,82 @@ export default function ResultatsClasse() {
             <SkeletonTableau rows={8} />
           </div>
         ) : !resultats ? (
-          <p className="text-sm text-red-400">Impossible de charger les résultats.</p>
+          <p className="text-sm text-red-400">
+            Impossible de charger les résultats.
+          </p>
         ) : (
           <>
             <p className="text-sm text-ivoire/50 mb-4">
               Complétude de la saisie : {resultats.completude}%
-              {resultats.completude < 100 && " — le rang s'affichera une fois toutes les notes saisies"}
+              {resultats.completude < 100 &&
+                " — le rang s'affichera une fois toutes les notes saisies"}
             </p>
 
-            <table className="w-full text-sm border border-champagne/10 bg-obsidienne-light rounded-2xl overflow-hidden mb-4">
-              <thead>
-                <tr>
-                  <th className="border-b border-champagne/10 px-3 py-2 text-left text-ivoire/60 font-medium">Élève</th>
-                  <th className="border-b border-champagne/10 px-3 py-2 text-left text-ivoire/60 font-medium">Moyenne</th>
-                  <th className="border-b border-champagne/10 px-3 py-2 text-left text-ivoire/60 font-medium">Rang</th>
-                </tr>
-              </thead>
-              <tbody>
-                {resultats.resultats.map((r) => (
-                  <tr key={r.eleveId}>
-                    <td className="border-b border-champagne/5 px-3 py-2">
-                      {r.nom} {r.prenom}
-                    </td>
-                    <td className="border-b border-champagne/5 px-3 py-2">{r.moyenne ?? "—"}</td>
-                    <td className="border-b border-champagne/5 px-3 py-2">
-                      {r.rang === 1 ? (
-                        <span className="text-champagne font-medium">{r.rang}</span>
-                      ) : (
-                        r.rang ?? "—"
-                      )}
-                    </td>
+            {/* Vue cartes — mobile */}
+            <div className="sm:hidden space-y-2 mb-4">
+              {resultats.resultats.map((r) => (
+                <div
+                  key={r.eleveId}
+                  className="rounded-xl border border-champagne/10 bg-obsidienne-light px-4 py-3 flex items-center justify-between"
+                >
+                  <span className="text-sm font-medium">
+                    {r.nom} {r.prenom}
+                  </span>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="text-ivoire/70">{r.moyenne ?? "—"}</span>
+                    <span
+                      className={
+                        r.rang === 1
+                          ? "text-champagne font-medium"
+                          : "text-ivoire/60"
+                      }
+                    >
+                      {r.rang ?? "—"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Table — desktop / tablette */}
+            <div className="hidden sm:block overflow-x-auto -mx-1 mb-4">
+              <table className="w-full text-sm border border-champagne/10 bg-obsidienne-light rounded-2xl overflow-hidden">
+                <thead>
+                  <tr>
+                    <th className="border-b border-champagne/10 px-3 py-2 text-left text-ivoire/60 font-medium">
+                      Élève
+                    </th>
+                    <th className="border-b border-champagne/10 px-3 py-2 text-left text-ivoire/60 font-medium">
+                      Moyenne
+                    </th>
+                    <th className="border-b border-champagne/10 px-3 py-2 text-left text-ivoire/60 font-medium">
+                      Rang
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {resultats.resultats.map((r) => (
+                    <tr key={r.eleveId}>
+                      <td className="border-b border-champagne/5 px-3 py-2">
+                        {r.nom} {r.prenom}
+                      </td>
+                      <td className="border-b border-champagne/5 px-3 py-2">
+                        {r.moyenne ?? "—"}
+                      </td>
+                      <td className="border-b border-champagne/5 px-3 py-2">
+                        {r.rang === 1 ? (
+                          <span className="text-champagne font-medium">
+                            {r.rang}
+                          </span>
+                        ) : (
+                          r.rang ?? "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             <button
               onClick={telechargerPdf}

@@ -9,15 +9,33 @@ const JWT_SECRET = process.env.JWT_SECRET || "change_this_secret_in_production";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+/** Mot de passe : min 8 caractères, au moins une lettre et un chiffre */
+function validerMotDePasse(motDePasse: string): void {
+  if (motDePasse.length < 8) {
+    throw new Error("Le mot de passe doit contenir au moins 8 caractères.");
+  }
+  if (!/[a-zA-Z]/.test(motDePasse) || !/[0-9]/.test(motDePasse)) {
+    throw new Error(
+      "Le mot de passe doit contenir au moins une lettre et un chiffre."
+    );
+  }
+}
+
 function genererToken(enseignant: Enseignant): string {
   return jwt.sign({ sub: enseignant.id, email: enseignant.email }, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
-  });
+    expiresIn: JWT_EXPIRES_IN as string,
+  } as jwt.SignOptions);
 }
 
 export interface SessionAuth {
   token: string;
-  enseignant: { id: string; nom: string; prenom: string; email: string; matiere: string | null };
+  enseignant: {
+    id: string;
+    nom: string;
+    prenom: string;
+    email: string;
+    matiere: string | null;
+  };
 }
 
 function versSession(enseignant: Enseignant, token: string): SessionAuth {
@@ -40,6 +58,8 @@ export async function inscrire(
   motDePasse: string,
   nomMatiere?: string
 ): Promise<SessionAuth> {
+  validerMotDePasse(motDePasse);
+
   const repo = AppDataSource.getRepository(Enseignant);
 
   const existant = await repo.findOne({ where: { email } });
@@ -59,7 +79,10 @@ export async function inscrire(
   return versSession(enseignant, genererToken(enseignant));
 }
 
-export async function connecter(email: string, motDePasse: string): Promise<SessionAuth> {
+export async function connecter(
+  email: string,
+  motDePasse: string
+): Promise<SessionAuth> {
   const repo = AppDataSource.getRepository(Enseignant);
   const enseignant = await repo.findOne({ where: { email } });
 
@@ -69,7 +92,10 @@ export async function connecter(email: string, motDePasse: string): Promise<Sess
     throw new Error("Email ou mot de passe incorrect.");
   }
 
-  const motDePasseValide = await bcrypt.compare(motDePasse, enseignant.mot_de_passe_hash);
+  const motDePasseValide = await bcrypt.compare(
+    motDePasse,
+    enseignant.mot_de_passe_hash
+  );
   if (!motDePasseValide) {
     throw new Error("Email ou mot de passe incorrect.");
   }
@@ -82,7 +108,9 @@ export async function connecter(email: string, motDePasse: string): Promise<Sess
  * d'identité (ID token) obtenu via Google Identity Services ; on le
  * vérifie côté serveur avant de créer ou récupérer le compte enseignant.
  */
-export async function connecterAvecGoogle(idToken: string): Promise<SessionAuth> {
+export async function connecterAvecGoogle(
+  idToken: string
+): Promise<SessionAuth> {
   const ticket = await googleClient.verifyIdToken({
     idToken,
     audience: process.env.GOOGLE_CLIENT_ID,

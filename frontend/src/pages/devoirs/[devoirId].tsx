@@ -33,7 +33,9 @@ export default function SaisieNotes() {
   const [statuts, setStatuts] = useState<Record<string, StatutLigne>>({});
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {}
+  );
   const syncEnCours = useRef(false);
 
   // Chargement de la grille
@@ -327,9 +329,11 @@ export default function SaisieNotes() {
 
   function iconeStatut(eleveId: string) {
     const s = statuts[eleveId] || "idle";
-    if (s === "saving") return <span className="text-ivoire/40 text-xs">💾</span>;
+    if (s === "saving")
+      return <span className="text-ivoire/40 text-xs">💾</span>;
     if (s === "saved") return <span className="text-champagne text-xs">✓</span>;
-    if (s === "pending") return <span className="text-amber-400 text-xs">⏳</span>;
+    if (s === "pending")
+      return <span className="text-amber-400 text-xs">⏳</span>;
     if (s === "error") return <span className="text-red-400 text-xs">⚠</span>;
     return null;
   }
@@ -416,76 +420,78 @@ export default function SaisieNotes() {
           </div>
         )}
 
-        <table className="w-full text-sm border border-champagne/10 bg-obsidienne-light rounded-2xl overflow-hidden mb-4">
-          <thead>
-            <tr>
-              <th className="border-b border-champagne/10 px-3 py-2.5 text-left text-ivoire/60 font-medium">
-                Élève
-              </th>
-              <th className="border-b border-champagne/10 px-3 py-2.5 text-left text-ivoire/60 font-medium">
-                Note
-              </th>
-              <th className="border-b border-champagne/10 px-3 py-2.5 text-left text-ivoire/60 font-medium">
-                Absent
-              </th>
-              <th className="border-b border-champagne/10 px-2 py-2.5 w-8"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {lignes.map((ligne, index) => {
-              const estRemplie =
-                !ligne.absent &&
-                ligne.valeur !== null &&
-                ligne.valeur !== undefined;
+        <div className="overflow-x-auto -mx-4 px-4 mb-4">
+          <table className="w-full min-w-[320px] text-sm border border-champagne/10 bg-obsidienne-light rounded-2xl overflow-hidden">
+            <thead>
+              <tr>
+                <th className="border-b border-champagne/10 px-3 py-2.5 text-left text-ivoire/60 font-medium">
+                  Élève
+                </th>
+                <th className="border-b border-champagne/10 px-3 py-2.5 text-left text-ivoire/60 font-medium">
+                  Note
+                </th>
+                <th className="border-b border-champagne/10 px-3 py-2.5 text-left text-ivoire/60 font-medium">
+                  Absent
+                </th>
+                <th className="border-b border-champagne/10 px-2 py-2.5 w-8"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {lignes.map((ligne, index) => {
+                const estRemplie =
+                  !ligne.absent &&
+                  ligne.valeur !== null &&
+                  ligne.valeur !== undefined;
 
-              return (
-                <tr
-                  key={ligne.eleveId}
-                  className={`
+                return (
+                  <tr
+                    key={ligne.eleveId}
+                    className={`
                     border-b border-champagne/5 transition-colors
                     ${estRemplie ? "bg-champagne/[0.06]" : "bg-transparent"}
                   `}
-                >
-                  <td className="px-3 py-2.5">
-                    {ligne.nom} {ligne.prenom}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <input
-                      ref={(el) => {
-                        inputRefs.current[index] = el;
-                      }}
-                      type="text"
-                      inputMode="decimal"
-                      disabled={ligne.absent}
-                      value={ligne.valeur ?? ""}
-                      onChange={(e) =>
-                        modifierValeur(ligne.eleveId, e.target.value)
-                      }
-                      onFocus={(e) => e.target.select()}
-                      onKeyDown={(e) => handleKeyDown(e, index)}
-                      className="w-20 rounded-lg bg-obsidienne border border-champagne/15 px-2 py-1.5
+                  >
+                    <td className="px-3 py-2.5">
+                      {ligne.nom} {ligne.prenom}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <input
+                        ref={(el) => {
+                          inputRefs.current[index] = el;
+                        }}
+                        type="text"
+                        inputMode="decimal"
+                        disabled={ligne.absent}
+                        value={ligne.valeur ?? ""}
+                        onChange={(e) =>
+                          modifierValeur(ligne.eleveId, e.target.value)
+                        }
+                        onFocus={(e) => e.target.select()}
+                        onKeyDown={(e) => handleKeyDown(e, index)}
+                        className="w-20 min-w-[4.5rem] rounded-lg bg-obsidienne border border-champagne/15 px-2 py-2
                                  focus:outline-none focus:border-champagne/50 focus:ring-1 focus:ring-champagne/30
-                                 disabled:opacity-40 disabled:cursor-not-allowed text-ivoire"
-                      placeholder="—"
-                    />
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <input
-                      type="checkbox"
-                      checked={ligne.absent}
-                      onChange={() => basculerAbsent(ligne.eleveId)}
-                      tabIndex={-1}
-                      className="accent-champagne w-4 h-4 cursor-pointer"
-                    />
-                  </td>
-                  <td className="px-2 py-2.5 text-center">
-                    {iconeStatut(ligne.eleveId)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                                 disabled:opacity-40 disabled:cursor-not-allowed text-ivoire text-base"
+                        placeholder="—"
+                      />
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={ligne.absent}
+                        onChange={() => basculerAbsent(ligne.eleveId)}
+                        tabIndex={-1}
+                        className="accent-champagne w-4 h-4 cursor-pointer"
+                      />
+                    </td>
+                    <td className="px-2 py-2.5 text-center">
+                      {iconeStatut(ligne.eleveId)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
           <button

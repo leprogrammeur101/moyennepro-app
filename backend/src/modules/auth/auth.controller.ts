@@ -1,15 +1,23 @@
 import { Router, Request, Response } from "express";
 import { inscrire, connecter, connecterAvecGoogle } from "./auth.service";
+import {
+  parserOuErreur,
+  schemaInscription,
+  schemaConnexion,
+} from "../../lib/validation";
 
 export const authRouter = Router();
 
 authRouter.post("/auth/register", async (req: Request, res: Response) => {
   try {
-    const { nom, prenom, email, mot_de_passe, matiere } = req.body;
-    if (!nom || !prenom || !email || !mot_de_passe) {
-      return res.status(400).json({ message: "Tous les champs sont requis." });
-    }
-    const session = await inscrire(nom, prenom, email, mot_de_passe, matiere);
+    const donnees = parserOuErreur(schemaInscription, req.body);
+    const session = await inscrire(
+      donnees.nom,
+      donnees.prenom,
+      donnees.email,
+      donnees.mot_de_passe,
+      donnees.matiere
+    );
     res.status(201).json(session);
   } catch (err: any) {
     res.status(400).json({ message: err.message });
@@ -18,8 +26,8 @@ authRouter.post("/auth/register", async (req: Request, res: Response) => {
 
 authRouter.post("/auth/login", async (req: Request, res: Response) => {
   try {
-    const { email, mot_de_passe } = req.body;
-    const session = await connecter(email, mot_de_passe);
+    const donnees = parserOuErreur(schemaConnexion, req.body);
+    const session = await connecter(donnees.email, donnees.mot_de_passe);
     res.json(session);
   } catch (err: any) {
     res.status(401).json({ message: err.message });
@@ -31,7 +39,7 @@ authRouter.post("/auth/login", async (req: Request, res: Response) => {
 authRouter.post("/auth/google", async (req: Request, res: Response) => {
   try {
     const { credential } = req.body;
-    if (!credential) {
+    if (!credential || typeof credential !== "string") {
       return res.status(400).json({ message: "Jeton Google manquant." });
     }
     const session = await connecterAvecGoogle(credential);
