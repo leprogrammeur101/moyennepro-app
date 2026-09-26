@@ -85,10 +85,12 @@ export default function ListeClasses() {
   }
 
   return (
-    <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
+    <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans overflow-x-hidden">
       <Navbar />
-      <main className="p-6 max-w-xl mx-auto">
-        <h1 className="font-landing italic text-2xl mb-5">Mes classes</h1>
+      <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto w-full">
+        <h1 className="font-landing italic text-xl sm:text-2xl mb-5">
+          Mes classes
+        </h1>
 
         {chargement ? (
           <div className="space-y-3 mb-4">
@@ -105,17 +107,20 @@ export default function ListeClasses() {
             {classes.map((classe) => (
               <div
                 key={classe.id}
-                className="flex items-center justify-between rounded-2xl border border-champagne/10 bg-obsidienne-light p-4"
+                className="flex items-center justify-between gap-3 rounded-2xl border border-champagne/10 bg-obsidienne-light p-3 sm:p-4"
               >
-                <Link href={`/classes/${classe.id}`} className="flex-1">
-                  <p className="font-medium">{classe.nom}</p>
+                <Link
+                  href={`/classes/${classe.id}`}
+                  className="flex-1 min-w-0"
+                >
+                  <p className="font-medium truncate">{classe.nom}</p>
                   <p className="text-sm text-ivoire/50">
                     {classe.niveau} · {classe.annee_scolaire}
                   </p>
                 </Link>
                 <button
                   onClick={() => gererSuppression(classe.id)}
-                  className="text-sm text-red-400 ml-3 hover:text-red-300"
+                  className="shrink-0 text-sm text-red-400 hover:text-red-300 px-1 py-1"
                 >
                   Supprimer
                 </button>
@@ -127,56 +132,56 @@ export default function ListeClasses() {
         {afficherFormulaire ? (
           <form
             onSubmit={soumettreNouvelleClasse}
-            className="space-y-3 bg-obsidienne-light rounded-2xl border border-champagne/10 p-4"
+            className="space-y-3 bg-obsidienne-light rounded-2xl border border-champagne/10 p-3 sm:p-4"
           >
             <input
               placeholder="Nom de la classe (ex. 3ème A)"
               value={nom}
               onChange={(e) => setNom(e.target.value)}
               required
-              className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
+              className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
             />
             <input
               placeholder="Niveau (ex. 3ème)"
               value={niveau}
               onChange={(e) => setNiveau(e.target.value)}
               required
-              className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
+              className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
             />
             <input
               placeholder="Année scolaire (ex. 2026-2027)"
               value={anneeScolaire}
               onChange={(e) => setAnneeScolaire(e.target.value)}
               required
-              className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
+              className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
             />
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <button
                 type="submit"
-                className="rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2 text-sm transition-all hover:scale-[1.02]"
+                className="w-full sm:w-auto rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2.5 text-sm transition-all hover:scale-[1.02]"
               >
                 Créer la classe
               </button>
               <button
                 type="button"
                 onClick={() => setAfficherFormulaire(false)}
-                className="rounded-xl border border-champagne/20 px-4 py-2 text-sm"
+                className="w-full sm:w-auto rounded-xl border border-champagne/20 px-4 py-2.5 text-sm"
               >
                 Annuler
               </button>
             </div>
           </form>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <button
               onClick={() => setAfficherFormulaire(true)}
-              className="rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2 text-sm transition-all hover:scale-[1.02]"
+              className="w-full sm:w-auto rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2.5 text-sm transition-all hover:scale-[1.02]"
             >
               Créer une classe
             </button>
             <Link
               href="/import"
-              className="rounded-xl border border-champagne/20 px-4 py-2 text-sm hover:border-champagne/40 transition-colors"
+              className="w-full sm:w-auto text-center rounded-xl border border-champagne/20 px-4 py-2.5 text-sm hover:border-champagne/40 transition-colors"
             >
               Importer depuis Excel
             </Link>
