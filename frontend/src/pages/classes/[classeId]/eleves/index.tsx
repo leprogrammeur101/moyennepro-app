@@ -9,6 +9,7 @@ import {
 } from "../../../../lib/api";
 import { useRequireAuth } from "../../../../lib/useAuth";
 import Navbar from "../../../../components/Navbar";
+import BoutonRetour from "../../../../components/BoutonRetour";
 import { Skeleton } from "../../../../components/Skeleton";
 import { useToast } from "../../../../components/Toast";
 
@@ -99,12 +100,10 @@ export default function ListeElevesClasse() {
     <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans overflow-x-hidden">
       <Navbar />
       <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto w-full">
-        <Link
+        <BoutonRetour
           href={`/classes/${classeId}`}
-          className="text-sm text-ivoire/50 mb-4 inline-block hover:text-champagne transition-colors"
-        >
-          ← Retour à la classe
-        </Link>
+          label="Retour à la classe"
+        />
 
         <div className="flex flex-wrap items-baseline justify-between gap-2 mb-4">
           <h1 className="font-landing italic text-xl sm:text-2xl">Élèves</h1>
@@ -115,7 +114,6 @@ export default function ListeElevesClasse() {
           )}
         </div>
 
-        {/* Recherche */}
         <div className="relative mb-4">
           <input
             type="search"
@@ -130,7 +128,6 @@ export default function ListeElevesClasse() {
           </span>
         </div>
 
-        {/* Ajout rapide */}
         <form
           onSubmit={soumettreNouvelEleve}
           className="flex flex-col sm:flex-row gap-2 mb-4"
