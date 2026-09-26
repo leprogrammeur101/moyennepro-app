@@ -8,28 +8,17 @@ export interface ResultatEleve {
   eleveId: string;
   nom: string;
   prenom: string;
-  moyenne: number | null; // null si aucune note saisie
-  rang: number | null; // null si la classe n'est pas complète
+  matricule?: string | null;
+  moyenne: number | null;
+  rang: number | null;
 }
 
 export interface ResultatClasse {
   classeId: string;
-  completude: number; // % d'élèves ayant au moins une note dans chaque devoir programmé
+  completude: number;
   resultats: ResultatEleve[];
 }
 
-/**
- * Calcule la moyenne d'un élève à partir de ses notes.
- *
- * Formule (validée avec Soro) :
- *   moyenne = somme(notes) / somme(coefficients)
- *
- * - On n'applique PAS note × coefficient au numérateur.
- * - Les coefficients interviennent uniquement au dénominateur.
- * - Une note absente vaut 0 ; son coefficient reste inclus.
- * - Interrogations (/10, coeff 0,5) et devoirs (/20, coeff 1) sont
- *   additionnés en valeurs brutes, sans conversion d'échelle.
- */
 function calculerMoyenne(notes: Note[]): number | null {
   if (notes.length === 0) return null;
 
@@ -47,13 +36,6 @@ function calculerMoyenne(notes: Note[]): number | null {
   return Math.round((sommeNotes / sommeCoefficients) * 100) / 100;
 }
 
-/**
- * Calcule la moyenne et le rang de tous les élèves d'une classe,
- * dans la matière de l'enseignant, pour une période donnée.
- *
- * Le rang est calculé "à la volée" (pas de table de classement figé) :
- * il est recalculé à chaque appel à partir des notes actuelles.
- */
 export async function calculerResultatsClasse(
   classeId: string,
   periodeId: string
@@ -83,7 +65,6 @@ export async function calculerResultatsClasse(
     })
   );
 
-  // Complétude : proportion d'élèves ayant une note pour chaque devoir programmé
   const eleveComplet = (nbNotes: number) =>
     devoirsProgrammes > 0 && nbNotes >= devoirsProgrammes;
   const nbComplets = resultatsBruts.filter((r) =>
@@ -92,8 +73,6 @@ export async function calculerResultatsClasse(
   const completude =
     eleves.length > 0 ? Math.round((nbComplets / eleves.length) * 100) : 0;
 
-  // Le rang n'est publié que si la classe est à 100% de complétude
-  // (évite un classement faussé par des notes manquantes) — voir cahier des charges §2.3
   const classeComplete = completude === 100;
 
   let resultats: ResultatEleve[];
@@ -105,6 +84,7 @@ export async function calculerResultatsClasse(
       eleveId: r.eleve.id,
       nom: r.eleve.nom,
       prenom: r.eleve.prenom,
+      matricule: r.eleve.matricule ?? null,
       moyenne: r.moyenne,
       rang: r.moyenne !== null ? index + 1 : null,
     }));
@@ -113,8 +93,9 @@ export async function calculerResultatsClasse(
       eleveId: r.eleve.id,
       nom: r.eleve.nom,
       prenom: r.eleve.prenom,
+      matricule: r.eleve.matricule ?? null,
       moyenne: r.moyenne,
-      rang: null, // classe incomplète : pas de rang affiché
+      rang: null,
     }));
   }
 
