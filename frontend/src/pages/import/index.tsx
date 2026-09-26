@@ -10,6 +10,7 @@ import {
 } from "../../lib/api";
 import { useRequireAuth } from "../../lib/useAuth";
 import Navbar from "../../components/Navbar";
+import BoutonRetour from "../../components/BoutonRetour";
 
 type Etape = "infos" | "apercu";
 type ModeCible = "nouvelle" | "existante";
@@ -19,18 +20,15 @@ export default function ImportExcel() {
   const router = useRouter();
   const [etape, setEtape] = useState<Etape>("infos");
 
-  // Cible de l'import : nouvelle classe ou classe existante
   const [mode, setMode] = useState<ModeCible>("nouvelle");
   const [classesExistantes, setClassesExistantes] = useState<Classe[]>([]);
   const [classeSelectionnee, setClasseSelectionnee] = useState("");
 
-  // Infos de la nouvelle classe (si mode "nouvelle")
   const [nom, setNom] = useState("");
   const [niveau, setNiveau] = useState("");
   const [anneeScolaire, setAnneeScolaire] = useState("2026-2027");
   const [fichier, setFichier] = useState<File | null>(null);
 
-  // Résultat de la détection + mapping manuel de secours
   const [apercu, setApercu] = useState<ApercuColonnes | null>(null);
   const [colonneNomChoisie, setColonneNomChoisie] = useState("");
   const [colonnePrenomChoisie, setColonnePrenomChoisie] = useState("");
@@ -44,7 +42,7 @@ export default function ImportExcel() {
       if (liste.length > 0) {
         setClasseSelectionnee(liste[0].id);
       } else {
-        setMode("nouvelle"); // pas de classe existante -> pas d'autre choix
+        setMode("nouvelle");
       }
     });
   }, []);
@@ -65,7 +63,9 @@ export default function ImportExcel() {
       return;
     }
     if (!construireCible()) {
-      setErreur("Choisis une classe existante ou renseigne les infos de la nouvelle classe.");
+      setErreur(
+        "Choisis une classe existante ou renseigne les infos de la nouvelle classe."
+      );
       return;
     }
     setErreur(null);
@@ -77,7 +77,9 @@ export default function ImportExcel() {
       setColonnePrenomChoisie(resultat.colonnePrenom ?? "");
       setEtape("apercu");
     } catch {
-      setErreur("Impossible d'analyser le fichier. Vérifie qu'il s'agit bien d'un .xlsx.");
+      setErreur(
+        "Impossible d'analyser le fichier. Vérifie qu'il s'agit bien d'un .xlsx."
+      );
     } finally {
       setChargement(false);
     }
@@ -92,7 +94,12 @@ export default function ImportExcel() {
     setErreur(null);
     setChargement(true);
     try {
-      const resultat = await confirmerImportExcel(fichier, colonneNomChoisie, colonnePrenomChoisie, cible);
+      const resultat = await confirmerImportExcel(
+        fichier,
+        colonneNomChoisie,
+        colonnePrenomChoisie,
+        cible
+      );
       router.push(`/classes/${resultat.classe.id}`);
     } catch (err: any) {
       setErreur(err?.response?.data?.message || "Échec de l'import.");
@@ -104,10 +111,13 @@ export default function ImportExcel() {
   const detectionReussie = apercu?.colonneNom && apercu?.colonnePrenom;
 
   return (
-    <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
+    <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans overflow-x-hidden">
       <Navbar />
-      <main className="p-6 max-w-xl mx-auto">
-        <h1 className="font-landing italic text-2xl mb-4">Importer des élèves depuis Excel</h1>
+      <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto w-full">
+        <BoutonRetour href="/dashboard" label="Tableau de bord" />
+        <h1 className="font-landing italic text-xl sm:text-2xl mb-4">
+          Importer des élèves depuis Excel
+        </h1>
 
         {etape === "infos" && (
           <form
@@ -197,18 +207,23 @@ export default function ImportExcel() {
           <div>
             {detectionReussie ? (
               <p className="text-sm text-ivoire/70 mb-3">
-                Colonnes détectées : <strong>{apercu.colonneNom}</strong> (nom),{" "}
-                <strong>{apercu.colonnePrenom}</strong> (prénom). Vérifie l'aperçu ci-dessous avant de confirmer.
+                Colonnes détectées : <strong>{apercu.colonneNom}</strong> (nom),
+                {" "}
+                <strong>{apercu.colonnePrenom}</strong> (prénom). Vérifie
+                l'aperçu ci-dessous avant de confirmer.
               </p>
             ) : (
               <p className="text-sm text-champagne/80 mb-3">
-                Détection automatique incertaine — sélectionne manuellement les colonnes correspondantes ci-dessous.
+                Détection automatique incertaine — sélectionne manuellement les
+                colonnes correspondantes ci-dessous.
               </p>
             )}
 
-            <div className="flex gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <div className="flex-1">
-                <label className="text-xs text-ivoire/50 block mb-1">Colonne Nom</label>
+                <label className="text-xs text-ivoire/50 block mb-1">
+                  Colonne Nom
+                </label>
                 <select
                   value={colonneNomChoisie}
                   onChange={(e) => setColonneNomChoisie(e.target.value)}
@@ -223,7 +238,9 @@ export default function ImportExcel() {
                 </select>
               </div>
               <div className="flex-1">
-                <label className="text-xs text-ivoire/50 block mb-1">Colonne Prénom</label>
+                <label className="text-xs text-ivoire/50 block mb-1">
+                  Colonne Prénom
+                </label>
                 <select
                   value={colonnePrenomChoisie}
                   onChange={(e) => setColonnePrenomChoisie(e.target.value)}
@@ -239,39 +256,45 @@ export default function ImportExcel() {
               </div>
             </div>
 
-            <table className="w-full text-sm border border-champagne/10 bg-obsidienne-light rounded-2xl overflow-hidden mb-4">
-              <thead>
-                <tr>
-                  {apercu.colonnesDisponibles.map((col) => (
-                    <th
-                      key={col}
-                      className={`border-b border-champagne/10 px-2 py-1 text-left ${
-                        col === colonneNomChoisie || col === colonnePrenomChoisie
-                          ? "bg-champagne/15 text-champagne"
-                          : "text-ivoire/60"
-                      }`}
-                    >
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {apercu.apercu.map((ligne) => (
-                  <tr key={ligne.ligne}>
+            <div className="overflow-x-auto mb-4">
+              <table className="w-full text-sm border border-champagne/10 bg-obsidienne-light rounded-2xl overflow-hidden">
+                <thead>
+                  <tr>
                     {apercu.colonnesDisponibles.map((col) => (
-                      <td key={col} className="border-b border-champagne/5 px-2 py-1">
-                        {ligne.valeurs[col]}
-                      </td>
+                      <th
+                        key={col}
+                        className={`border-b border-champagne/10 px-2 py-1 text-left ${
+                          col === colonneNomChoisie ||
+                          col === colonnePrenomChoisie
+                            ? "bg-champagne/15 text-champagne"
+                            : "text-ivoire/60"
+                        }`}
+                      >
+                        {col}
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {apercu.apercu.map((ligne) => (
+                    <tr key={ligne.ligne}>
+                      {apercu.colonnesDisponibles.map((col) => (
+                        <td
+                          key={col}
+                          className="border-b border-champagne/5 px-2 py-1"
+                        >
+                          {ligne.valeurs[col]}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             {erreur && <p className="text-sm text-red-400 mb-3">{erreur}</p>}
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <button
                 onClick={confirmerImport}
                 disabled={chargement}
@@ -281,9 +304,9 @@ export default function ImportExcel() {
               </button>
               <button
                 onClick={() => setEtape("infos")}
-                className="rounded-xl border border-champagne/20 px-4 py-2 text-sm"
+                className="rounded-xl border border-champagne/20 px-4 py-2 text-sm hover:border-champagne/40"
               >
-                Retour
+                Modifier le fichier
               </button>
             </div>
           </div>
