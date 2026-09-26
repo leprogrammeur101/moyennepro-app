@@ -20,6 +20,9 @@ function normaliser(texte: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+/** 8 chiffres + 1 lettre (ex. 12345678A) */
+const REGEX_MATRICULE = /^\d{8}[A-Za-z]$/;
+
 export default function ListeElevesClasse() {
   useRequireAuth();
   const router = useRouter();
@@ -67,11 +70,21 @@ export default function ListeElevesClasse() {
   async function soumettreNouvelEleve(e: React.FormEvent) {
     e.preventDefault();
     if (!classeId) return;
+
+    const mat = matricule.trim().toUpperCase();
+    if (mat && !REGEX_MATRICULE.test(mat)) {
+      showToast(
+        "Matricule invalide : 8 chiffres + 1 lettre (ex. 12345678A)",
+        "error"
+      );
+      return;
+    }
+
     try {
       await ajouterEleve(classeId as string, {
         nom,
         prenom,
-        matricule: matricule.trim() || undefined,
+        matricule: mat || undefined,
       });
       setNom("");
       setPrenom("");
@@ -154,10 +167,13 @@ export default function ListeElevesClasse() {
             className="w-full sm:flex-1 min-w-0 rounded-xl bg-obsidienne-light border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
           />
           <input
-            placeholder="Matricule (optionnel)"
+            placeholder="12345678A"
+            title="8 chiffres suivis d'une lettre (ex. 12345678A)"
             value={matricule}
-            onChange={(e) => setMatricule(e.target.value)}
-            className="w-full sm:flex-1 min-w-0 rounded-xl bg-obsidienne-light border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
+            onChange={(e) => setMatricule(e.target.value.toUpperCase())}
+            maxLength={9}
+            pattern="\\d{8}[A-Za-z]"
+            className="w-full sm:flex-1 min-w-0 rounded-xl bg-obsidienne-light border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40 font-mono"
           />
           <button
             type="submit"
@@ -168,7 +184,7 @@ export default function ListeElevesClasse() {
         </form>
 
         <p className="text-xs text-ivoire/40 mb-4">
-          Ou{" "}
+          Matricule optionnel : 8 chiffres + 1 lettre (ex. 12345678A). Ou{" "}
           <Link href="/import" className="underline text-champagne/80">
             importer depuis Excel
           </Link>
@@ -202,7 +218,7 @@ export default function ListeElevesClasse() {
                       {eleve.nom} {eleve.prenom}
                     </span>
                     {eleve.matricule && (
-                      <span className="block text-xs text-ivoire/45 truncate">
+                      <span className="block text-xs text-ivoire/45 truncate font-mono">
                         {eleve.matricule}
                       </span>
                     )}
