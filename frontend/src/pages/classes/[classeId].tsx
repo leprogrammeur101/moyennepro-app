@@ -17,7 +17,7 @@ import {
 } from "../../lib/api";
 import { useRequireAuth } from "../../lib/useAuth";
 import Navbar from "../../components/Navbar";
-import { Skeleton, SkeletonTableau } from "../../components/Skeleton";
+import { Skeleton } from "../../components/Skeleton";
 import { useToast } from "../../components/Toast";
 
 export default function DetailClasse() {
@@ -32,12 +32,16 @@ export default function DetailClasse() {
 
   const [devoirs, setDevoirs] = useState<Devoir[]>([]);
   const [periodes, setPeriodes] = useState<Periode[]>([]);
-  const [afficherFormulaireDevoir, setAfficherFormulaireDevoir] = useState(false);
+  const [afficherFormulaireDevoir, setAfficherFormulaireDevoir] =
+    useState(false);
   const [nomDevoir, setNomDevoir] = useState("");
   const [typeDevoir, setTypeDevoir] = useState<TypeDevoir>("DEVOIR");
   const [periodeId, setPeriodeId] = useState("");
-  const [dateDevoir, setDateDevoir] = useState(new Date().toISOString().slice(0, 10));
+  const [dateDevoir, setDateDevoir] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
   const { showToast } = useToast();
+
   function chargerEleves() {
     if (!classeId) return;
     setChargementEleves(true);
@@ -91,7 +95,6 @@ export default function DetailClasse() {
     }
   }
 
-  // Créer rapidement une première période si aucune n'existe encore
   async function creerPeriodeParDefaut() {
     const periode = await creerPeriode({
       nom: "Trimestre 1",
@@ -143,32 +146,44 @@ export default function DetailClasse() {
   }
 
   return (
-    <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
+    <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans overflow-x-hidden">
       <Navbar />
-      <main className="p-6 max-w-xl mx-auto">
-        <Link href="/classes" className="text-sm text-ivoire/50 mb-4 inline-block">
+      <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto w-full">
+        <Link
+          href="/classes"
+          className="text-sm text-ivoire/50 mb-4 inline-block hover:text-champagne transition-colors"
+        >
           ← Mes classes
         </Link>
 
         {/* --- Élèves --- */}
-        <h1 className="font-landing italic text-2xl mb-4">Élèves de la classe</h1>
+        <h1 className="font-landing italic text-xl sm:text-2xl mb-4">
+          Élèves de la classe
+        </h1>
 
-        <form onSubmit={soumettreNouvelEleve} className="flex gap-2 mb-4">
+        {/* Formulaire ajout élève : empilé sur mobile, ligne sur sm+ */}
+        <form
+          onSubmit={soumettreNouvelEleve}
+          className="flex flex-col sm:flex-row gap-2 mb-4"
+        >
           <input
             placeholder="Nom"
             value={nom}
             onChange={(e) => setNom(e.target.value)}
             required
-            className="flex-1 rounded-xl bg-obsidienne-light border border-champagne/15 px-3 py-2 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
+            className="w-full sm:flex-1 min-w-0 rounded-xl bg-obsidienne-light border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
           />
           <input
             placeholder="Prénom"
             value={prenom}
             onChange={(e) => setPrenom(e.target.value)}
             required
-            className="flex-1 rounded-xl bg-obsidienne-light border border-champagne/15 px-3 py-2 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
+            className="w-full sm:flex-1 min-w-0 rounded-xl bg-obsidienne-light border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
           />
-          <button type="submit" className="rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2 text-sm transition-all hover:scale-[1.02]">
+          <button
+            type="submit"
+            className="w-full sm:w-auto shrink-0 rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2.5 text-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
             Ajouter
           </button>
         </form>
@@ -180,7 +195,7 @@ export default function DetailClasse() {
             <Skeleton className="h-12 w-full rounded-xl" />
           </div>
         ) : eleves.length === 0 ? (
-          <p className="text-sm text-ivoire/50 mb-6">
+          <p className="text-sm text-ivoire/50 mb-6 leading-relaxed">
             Aucun élève pour l'instant — ajoute-les un par un ci-dessus, ou{" "}
             <Link href="/import" className="underline text-champagne">
               importe-les depuis un fichier Excel
@@ -188,37 +203,75 @@ export default function DetailClasse() {
             .
           </p>
         ) : (
-          <table className="w-full text-sm border border-champagne/10 bg-obsidienne-light rounded-2xl overflow-hidden mb-6">
-            <thead>
-              <tr>
-                <th className="border-b border-champagne/10 px-3 py-2 text-left text-ivoire/60 font-medium">Nom</th>
-                <th className="border-b border-champagne/10 px-3 py-2 text-left text-ivoire/60 font-medium">Prénom</th>
-                <th className="border-b border-champagne/10 px-3 py-2"></th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Cartes — mobile */}
+            <ul className="sm:hidden space-y-2 mb-6">
               {eleves.map((eleve) => (
-                <tr key={eleve.id}>
-                  <td className="border-b border-champagne/5 px-3 py-2">{eleve.nom}</td>
-                  <td className="border-b border-champagne/5 px-3 py-2">{eleve.prenom}</td>
-                  <td className="border-b border-champagne/5 px-3 py-2 text-right">
-                    <button onClick={() => gererSuppressionEleve(eleve.id)} className="text-red-400">
-                      Supprimer
-                    </button>
-                  </td>
-                </tr>
+                <li
+                  key={eleve.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-champagne/10 bg-obsidienne-light px-3 py-3"
+                >
+                  <span className="text-sm font-medium min-w-0 truncate">
+                    {eleve.nom} {eleve.prenom}
+                  </span>
+                  <button
+                    onClick={() => gererSuppressionEleve(eleve.id)}
+                    className="shrink-0 text-xs text-red-400 hover:text-red-300 px-2 py-1"
+                  >
+                    Supprimer
+                  </button>
+                </li>
               ))}
-            </tbody>
-          </table>
+            </ul>
+
+            {/* Tableau — tablette / desktop */}
+            <div className="hidden sm:block overflow-x-auto mb-6 -mx-1">
+              <table className="w-full text-sm border border-champagne/10 bg-obsidienne-light rounded-2xl overflow-hidden">
+                <thead>
+                  <tr>
+                    <th className="border-b border-champagne/10 px-3 py-2 text-left text-ivoire/60 font-medium">
+                      Nom
+                    </th>
+                    <th className="border-b border-champagne/10 px-3 py-2 text-left text-ivoire/60 font-medium">
+                      Prénom
+                    </th>
+                    <th className="border-b border-champagne/10 px-3 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {eleves.map((eleve) => (
+                    <tr key={eleve.id}>
+                      <td className="border-b border-champagne/5 px-3 py-2">
+                        {eleve.nom}
+                      </td>
+                      <td className="border-b border-champagne/5 px-3 py-2">
+                        {eleve.prenom}
+                      </td>
+                      <td className="border-b border-champagne/5 px-3 py-2 text-right">
+                        <button
+                          onClick={() => gererSuppressionEleve(eleve.id)}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          Supprimer
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {/* --- Devoirs --- */}
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-landing italic text-lg">Devoirs et interrogations</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h2 className="font-landing italic text-base sm:text-lg">
+            Devoirs et interrogations
+          </h2>
           {eleves.length > 0 && (
             <button
               onClick={() => setAfficherFormulaireDevoir((v) => !v)}
-              className="text-sm text-champagne"
+              className="text-sm text-champagne shrink-0"
             >
               {afficherFormulaireDevoir ? "Annuler" : "+ Nouveau"}
             </button>
@@ -228,7 +281,7 @@ export default function DetailClasse() {
         {afficherFormulaireDevoir && (
           <form
             onSubmit={soumettreNouveauDevoir}
-            className="space-y-3 bg-obsidienne-light rounded-2xl border border-champagne/10 p-4 mb-4"
+            className="space-y-3 bg-obsidienne-light rounded-2xl border border-champagne/10 p-3 sm:p-4 mb-4"
           >
             {periodes.length === 0 ? (
               <div className="text-sm text-champagne/80">
@@ -248,20 +301,24 @@ export default function DetailClasse() {
                   value={nomDevoir}
                   onChange={(e) => setNomDevoir(e.target.value)}
                   required
-                  className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
+                  className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
                 />
                 <select
                   value={typeDevoir}
-                  onChange={(e) => setTypeDevoir(e.target.value as TypeDevoir)}
-                  className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2 text-sm focus:outline-none focus:border-champagne/40"
+                  onChange={(e) =>
+                    setTypeDevoir(e.target.value as TypeDevoir)
+                  }
+                  className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm focus:outline-none focus:border-champagne/40"
                 >
                   <option value="DEVOIR">Devoir (/20, coefficient 1)</option>
-                  <option value="INTERROGATION">Interrogation (/10, coefficient 0,5)</option>
+                  <option value="INTERROGATION">
+                    Interrogation (/10, coefficient 0,5)
+                  </option>
                 </select>
                 <select
                   value={periodeId}
                   onChange={(e) => setPeriodeId(e.target.value)}
-                  className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2 text-sm focus:outline-none focus:border-champagne/40"
+                  className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm focus:outline-none focus:border-champagne/40"
                 >
                   {periodes.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -274,9 +331,12 @@ export default function DetailClasse() {
                   value={dateDevoir}
                   onChange={(e) => setDateDevoir(e.target.value)}
                   required
-                  className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2 text-sm focus:outline-none focus:border-champagne/40"
+                  className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm focus:outline-none focus:border-champagne/40"
                 />
-                <button type="submit" className="rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2 text-sm transition-all hover:scale-[1.02]">
+                <button
+                  type="submit"
+                  className="w-full sm:w-auto rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2.5 text-sm transition-all hover:scale-[1.02]"
+                >
                   Créer
                 </button>
               </>
@@ -285,21 +345,32 @@ export default function DetailClasse() {
         )}
 
         {devoirs.length === 0 ? (
-          <p className="text-sm text-ivoire/50">Aucun devoir créé pour cette classe.</p>
+          <p className="text-sm text-ivoire/50">
+            Aucun devoir créé pour cette classe.
+          </p>
         ) : (
           <div className="space-y-2 mb-6">
             {devoirs.map((devoir) => (
               <div
                 key={devoir.id}
-                className="flex items-center justify-between rounded-2xl border border-champagne/10 bg-obsidienne-light p-3"
+                className="flex flex-col xs:flex-row sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 rounded-2xl border border-champagne/10 bg-obsidienne-light p-3"
               >
-                <Link href={`/devoirs/${devoir.id}?classeId=${classeId}`} className="flex-1">
-                  <p className="font-medium">{devoir.nom}</p>
+                <Link
+                  href={`/devoirs/${devoir.id}?classeId=${classeId}`}
+                  className="flex-1 min-w-0"
+                >
+                  <p className="font-medium truncate">{devoir.nom}</p>
                   <p className="text-sm text-ivoire/50">
-                    {devoir.type === "INTERROGATION" ? "Interrogation /10" : "Devoir /20"} · {devoir.date}
+                    {devoir.type === "INTERROGATION"
+                      ? "Interrogation /10"
+                      : "Devoir /20"}{" "}
+                    · {devoir.date}
                   </p>
                 </Link>
-                <button onClick={() => gererSuppressionDevoir(devoir.id)} className="text-sm text-red-400">
+                <button
+                  onClick={() => gererSuppressionDevoir(devoir.id)}
+                  className="self-end sm:self-center shrink-0 text-sm text-red-400 hover:text-red-300 px-2 py-1"
+                >
                   Supprimer
                 </button>
               </div>
@@ -310,7 +381,7 @@ export default function DetailClasse() {
         {eleves.length > 0 && (
           <Link
             href={`/notes/${classeId}`}
-            className="inline-block rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2 text-sm transition-all hover:scale-[1.02]"
+            className="inline-flex w-full sm:w-auto justify-center rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2.5 text-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             Voir moyennes et rangs
           </Link>
