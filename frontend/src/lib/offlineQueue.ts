@@ -17,33 +17,34 @@ export interface PendingNote {
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
-
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: "id" });
       }
     };
-
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
+}
+
+export function makeNoteId(
+  classeId: string,
+  devoirId: string,
+  eleveId: string
+): string {
+  return `${classeId}_${devoirId}_${eleveId}`;
 }
 
 export async function ajouterNoteEnAttente(
   note: Omit<PendingNote, "id" | "createdAt">
 ): Promise<void> {
   const db = await openDB();
-  const id = `${note.classeId}_${note.devoirId}_${note.eleveId}`;
+  const id = makeNoteId(note.classeId, note.devoirId, note.eleveId);
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    store.put({
-      ...note,
-      id,
-      createdAt: Date.now(),
-    });
+    tx.objectStore(STORE_NAME).put({ ...note, id, createdAt: Date.now() });
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -51,54 +52,66 @@ export async function ajouterNoteEnAttente(
 
 export async function listerNotesEnAttente(): Promise<PendingNote[]> {
   const db = await openDB();
-
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
-    const request = store.getAll();
-    request.onsuccess = () => resolve(request.result || []);
-    request.onerror = () => reject(request.error);
+    const req = tx.objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
   });
+}
+
+export async function listerNotesPourDevoir(
+  classeId: string,
+  devoirId: string
+): Promise<PendingNote[]> {
+  const all = await listerNotesEnAttente();
+  return all.filter(
+    (n) => n.classeId === classeId && n.devoirId === devoirId
+  );
 }
 
 export async function supprimerNoteEnAttente(id: string): Promise<void> {
   const db = await openDB();
-
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    store.delete(id);
+    tx.objectStore(STORE_NAME).delete(id);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
 }
 
 /**
- * Synchronise la file.
- * `envoyer` doit :
- * - résoudre normalement si la note a été envoyée
- * - résoudre avec `false` pour ignorer (sans supprimer)
- * - throw en cas d'erreur réseau
+ * Synchronise les notes d'un devoir.
+ * - succès API → supprime de la file
+ * - 4xx validation → supprime + signale erreur (ne bloque pas la suite)
+ * - réseau → stop, on réessaiera
  */
-export async function synchroniserFile(
-  envoyer: (note: PendingNote) => Promise<boolean | void>
-): Promise<number> {
-  const pending = await listerNotesEnAttente();
-  let synced = 0;
+export async function synchroniserNotesDevoir(
+  classeId: string,
+  devoirId: string,
+  envoyer: (note: PendingNote) => Promise<void>
+): Promise<{ synced: string[]; errors: string[] }> {
+  const pending = await listerNotesPourDevoir(classeId, devoirId);
+  const synced: string[] = [];
+  const errors: string[] = [];
 
   for (const note of pending) {
     try {
-      const resultat = await envoyer(note);
-      // false = ignorer cette note (ne pas supprimer)
-      if (resultat === false) continue;
-
+      await envoyer(note);
       await supprimerNoteEnAttente(note.id);
-      synced++;
-    } catch {
-      // Erreur réseau : on arrête, on réessaiera plus tard
+      synced.push(note.eleveId);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      // Erreur métier : on retire de la file pour ne pas boucler
+      if (status && status >= 400 && status < 500) {
+        await supprimerNoteEnAttente(note.id);
+        errors.push(note.eleveId);
+        continue;
+      }
+      // Réseau / 5xx : on arrête
       break;
     }
   }
 
-  return synced;
+  return { synced, errors };
 }

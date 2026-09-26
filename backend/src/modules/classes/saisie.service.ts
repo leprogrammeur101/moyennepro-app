@@ -78,6 +78,15 @@ export async function enregistrerNotes(
   const baremeMax = BAREME_MAX[devoir.type];
   const noteRepo = AppDataSource.getRepository(Note);
 
+  // Notes déjà en base pour ce devoir
+  const existantes = await noteRepo.find({
+    where: { devoir: { id: devoirId } },
+    relations: { eleve: true },
+  });
+  const parEleve = new Map(existantes.map((n) => [n.eleve.id, n]));
+
+  const aSauvegarder: Note[] = [];
+
   for (const saisie of saisies) {
     const absent = saisie.absent ?? false;
     const valeur = absent ? 0 : Number(saisie.valeur);
@@ -88,9 +97,7 @@ export async function enregistrerNotes(
       );
     }
 
-    let note = await noteRepo.findOne({
-      where: { devoir: { id: devoirId }, eleve: { id: saisie.eleveId } },
-    });
+    let note = parEleve.get(saisie.eleveId);
     if (!note) {
       note = noteRepo.create({
         devoir: { id: devoirId } as any,
@@ -99,6 +106,11 @@ export async function enregistrerNotes(
     }
     note.valeur = valeur;
     note.absent = absent;
-    await noteRepo.save(note);
+    aSauvegarder.push(note);
+  }
+
+  // Un seul aller-retour DB
+  if (aSauvegarder.length > 0) {
+    await noteRepo.save(aSauvegarder);
   }
 }

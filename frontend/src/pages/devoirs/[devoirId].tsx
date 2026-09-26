@@ -12,7 +12,8 @@ import { Skeleton, SkeletonTableau } from "../../components/Skeleton";
 import { useToast } from "../../components/Toast";
 import {
   ajouterNoteEnAttente,
-  synchroniserFile,
+  listerNotesPourDevoir,
+  synchroniserNotesDevoir,
 } from "../../lib/offlineQueue";
 
 type StatutLigne = "idle" | "saving" | "saved" | "pending" | "error";
@@ -33,6 +34,7 @@ export default function SaisieNotes() {
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const syncEnCours = useRef(false);
 
   // Chargement de la grille
   useEffect(() => {
@@ -59,53 +61,103 @@ export default function SaisieNotes() {
       });
   }, [devoirId, classeId]);
 
-  // Sync offline au retour du réseau
-  // Sync offline au retour du réseau
+  // Restaure les statuts pending depuis IndexedDB + sync si online
   useEffect(() => {
     const cId = typeof classeId === "string" ? classeId : undefined;
     const dId = typeof devoirId === "string" ? devoirId : undefined;
+    if (!cId || !dId) return;
 
-    async function sync() {
-      if (!navigator.onLine || !cId || !dId) return;
+    let cancelled = false;
+
+    async function restaurerEtSync() {
+      // 1. Afficher ⏳ pour les notes encore en file
+      try {
+        const pending = await listerNotesPourDevoir(cId!, dId!);
+        if (cancelled) return;
+        if (pending.length > 0) {
+          setStatuts((prev) => {
+            const next = { ...prev };
+            pending.forEach((n) => {
+              next[n.eleveId] = "pending";
+            });
+            return next;
+          });
+        }
+      } catch (e) {
+        console.error("Lecture file offline:", e);
+      }
+
+      // 2. Si online → synchroniser
+      if (!navigator.onLine) return;
+      await lancerSync(cId!, dId!);
+    }
+
+    async function lancerSync(cId: string, dId: string) {
+      if (syncEnCours.current || !navigator.onLine) return;
+      syncEnCours.current = true;
 
       try {
-        const count = await synchroniserFile(async (note) => {
-          // Ignore les notes d'autres grilles (sans les supprimer)
-          if (note.classeId !== cId || note.devoirId !== dId) {
-            return false;
+        const { synced, errors } = await synchroniserNotesDevoir(
+          cId,
+          dId,
+          async (note) => {
+            await enregistrerNotes(note.classeId, note.devoirId, [
+              {
+                eleveId: note.eleveId,
+                valeur: note.valeur,
+                absent: note.absent,
+              },
+            ]);
           }
+        );
 
-          await enregistrerNotes(note.classeId, note.devoirId, [
-            {
-              eleveId: note.eleveId,
-              valeur: note.valeur,
-              absent: note.absent,
-            },
-          ]);
+        if (cancelled) return;
 
-          setStatuts((prev) => ({ ...prev, [note.eleveId]: "saved" }));
-          return true;
+        setStatuts((prev) => {
+          const next = { ...prev };
+          synced.forEach((id) => {
+            next[id] = "saved";
+          });
+          errors.forEach((id) => {
+            next[id] = "error";
+          });
+          return next;
         });
 
-        if (count > 0) {
+        if (synced.length > 0) {
           showToast(
-            `${count} note${count > 1 ? "s" : ""} synchronisée${count > 1 ? "s" : ""}`,
+            `${synced.length} note${synced.length > 1 ? "s" : ""} synchronisée${synced.length > 1 ? "s" : ""}`,
             "success"
           );
-
-          // Recharge la grille pour coller à l'état serveur
+          // Aligne l'UI sur le serveur
           const grille = await obtenirGrilleSaisie(cId, dId);
-          setLignes(grille.lignes);
+          if (!cancelled) setLignes(grille.lignes);
         }
-      } catch (err) {
-        console.error("Erreur sync offline:", err);
+
+        if (errors.length > 0) {
+          showToast(
+            `${errors.length} note${errors.length > 1 ? "s" : ""} invalide${errors.length > 1 ? "s" : ""} non synchronisée${errors.length > 1 ? "s" : ""}`,
+            "error"
+          );
+        }
+      } catch (e) {
+        console.error("Sync offline:", e);
+      } finally {
+        syncEnCours.current = false;
       }
     }
 
-    window.addEventListener("online", sync);
-    sync();
+    restaurerEtSync();
 
-    return () => window.removeEventListener("online", sync);
+    function onOnline() {
+      if (cId && dId) lancerSync(cId, dId);
+    }
+    window.addEventListener("online", onOnline);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", onOnline);
+    };
   }, [devoirId, classeId, showToast]);
 
   const notesSaisies = lignes.filter(
