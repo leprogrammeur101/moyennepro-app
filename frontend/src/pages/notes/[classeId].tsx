@@ -9,6 +9,7 @@ import {
 } from "../../lib/api";
 import { useRequireAuth } from "../../lib/useAuth";
 import Navbar from "../../components/Navbar";
+import BoutonRetour from "../../components/BoutonRetour";
 import { Skeleton, SkeletonTableau } from "../../components/Skeleton";
 import ModaleUpgrade from "../../components/ModaleUpgrade";
 import { useToast } from "../../components/Toast";
@@ -78,14 +79,19 @@ export default function ResultatsClasse() {
     }
   }
 
+  const hrefRetour = classeId ? `/classes/${classeId}` : "/classes";
+
   if (periodes.length === 0) {
     return (
       <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
         <Navbar />
-        <p className="px-4 py-6 text-sm text-ivoire/50">
-          Aucune période créée pour l'instant — crée-en une depuis la page
-          de la classe.
-        </p>
+        <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto">
+          <BoutonRetour href={hrefRetour} label="Retour à la classe" />
+          <p className="text-sm text-ivoire/50">
+            Aucune période créée pour l'instant — crée-en une depuis la
+            page de la classe.
+          </p>
+        </main>
       </div>
     );
   }
@@ -94,6 +100,8 @@ export default function ResultatsClasse() {
     <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans overflow-x-hidden">
       <Navbar />
       <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto w-full">
+        <BoutonRetour href={hrefRetour} label="Retour à la classe" />
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
           <h1 className="font-landing italic text-xl sm:text-2xl">
             Moyennes et rangs
@@ -128,7 +136,6 @@ export default function ResultatsClasse() {
                 " — le rang s'affichera une fois toutes les notes saisies"}
             </p>
 
-            {/* Vue cartes — mobile */}
             <div className="sm:hidden space-y-2 mb-4">
               {resultats.resultats.map((r) => (
                 <div
@@ -154,7 +161,6 @@ export default function ResultatsClasse() {
               ))}
             </div>
 
-            {/* Table — desktop / tablette */}
             <div className="hidden sm:block overflow-x-auto -mx-1 mb-4">
               <table className="w-full text-sm border border-champagne/10 bg-obsidienne-light rounded-2xl overflow-hidden">
                 <thead>
