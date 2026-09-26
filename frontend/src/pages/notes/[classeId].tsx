@@ -82,24 +82,26 @@ export default function ResultatsClasse() {
     return (
       <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
         <Navbar />
-        <p className="p-6 text-sm text-ivoire/50">
-          Aucune période créée pour l'instant — crée-en une depuis la page de
-          la classe.
+        <p className="px-4 py-6 text-sm text-ivoire/50">
+          Aucune période créée pour l'instant — crée-en une depuis la page
+          de la classe.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
+    <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans overflow-x-hidden">
       <Navbar />
-      <main className="p-6 max-w-xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="font-landing italic text-2xl">Moyennes et rangs</h1>
+      <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto w-full">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+          <h1 className="font-landing italic text-xl sm:text-2xl">
+            Moyennes et rangs
+          </h1>
           <select
             value={periodeId}
             onChange={(e) => setPeriodeId(e.target.value)}
-            className="rounded-xl bg-obsidienne-light border border-champagne/15 px-2 py-1.5 text-sm focus:outline-none focus:border-champagne/40"
+            className="w-full sm:w-auto max-w-full rounded-xl bg-obsidienne-light border border-champagne/15 px-3 py-2 text-sm focus:outline-none focus:border-champagne/40"
           >
             {periodes.map((p) => (
               <option key={p.id} value={p.id}>
@@ -120,7 +122,7 @@ export default function ResultatsClasse() {
           </p>
         ) : (
           <>
-            <p className="text-sm text-ivoire/50 mb-4">
+            <p className="text-sm text-ivoire/50 mb-4 leading-relaxed">
               Complétude de la saisie : {resultats.completude}%
               {resultats.completude < 100 &&
                 " — le rang s'affichera une fois toutes les notes saisies"}
@@ -131,12 +133,12 @@ export default function ResultatsClasse() {
               {resultats.resultats.map((r) => (
                 <div
                   key={r.eleveId}
-                  className="rounded-xl border border-champagne/10 bg-obsidienne-light px-4 py-3 flex items-center justify-between"
+                  className="rounded-xl border border-champagne/10 bg-obsidienne-light px-4 py-3 flex items-center justify-between gap-3"
                 >
-                  <span className="text-sm font-medium">
+                  <span className="text-sm font-medium min-w-0 truncate">
                     {r.nom} {r.prenom}
                   </span>
-                  <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-4 text-sm shrink-0">
                     <span className="text-ivoire/70">{r.moyenne ?? "—"}</span>
                     <span
                       className={
@@ -195,7 +197,7 @@ export default function ResultatsClasse() {
             <button
               onClick={telechargerPdf}
               disabled={export_}
-              className="rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2 text-sm transition-all hover:scale-[1.02] disabled:opacity-60"
+              className="w-full sm:w-auto rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2.5 text-sm transition-all hover:scale-[1.02] disabled:opacity-60"
             >
               {export_ ? "Génération…" : "Télécharger le PDF"}
             </button>
