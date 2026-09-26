@@ -32,6 +32,7 @@ export default function ImportExcel() {
   const [apercu, setApercu] = useState<ApercuColonnes | null>(null);
   const [colonneNomChoisie, setColonneNomChoisie] = useState("");
   const [colonnePrenomChoisie, setColonnePrenomChoisie] = useState("");
+  const [colonneMatriculeChoisie, setColonneMatriculeChoisie] = useState("");
 
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -75,6 +76,7 @@ export default function ImportExcel() {
       setApercu(resultat);
       setColonneNomChoisie(resultat.colonneNom ?? "");
       setColonnePrenomChoisie(resultat.colonnePrenom ?? "");
+      setColonneMatriculeChoisie(resultat.colonneMatricule ?? "");
       setEtape("apercu");
     } catch {
       setErreur(
@@ -98,7 +100,8 @@ export default function ImportExcel() {
         fichier,
         colonneNomChoisie,
         colonnePrenomChoisie,
-        cible
+        cible,
+        colonneMatriculeChoisie || null
       );
       router.push(`/classes/${resultat.classe.id}`);
     } catch (err: any) {
@@ -209,8 +212,13 @@ export default function ImportExcel() {
               <p className="text-sm text-ivoire/70 mb-3">
                 Colonnes détectées : <strong>{apercu.colonneNom}</strong> (nom),
                 {" "}
-                <strong>{apercu.colonnePrenom}</strong> (prénom). Vérifie
-                l'aperçu ci-dessous avant de confirmer.
+                <strong>{apercu.colonnePrenom}</strong> (prénom)
+                {apercu.colonneMatricule && (
+                  <>
+                    , <strong>{apercu.colonneMatricule}</strong> (matricule)
+                  </>
+                )}
+                . Vérifie l'aperçu ci-dessous avant de confirmer.
               </p>
             ) : (
               <p className="text-sm text-champagne/80 mb-3">
@@ -254,6 +262,23 @@ export default function ImportExcel() {
                   ))}
                 </select>
               </div>
+              <div className="flex-1">
+                <label className="text-xs text-ivoire/50 block mb-1">
+                  Colonne Matricule (optionnel)
+                </label>
+                <select
+                  value={colonneMatriculeChoisie}
+                  onChange={(e) => setColonneMatriculeChoisie(e.target.value)}
+                  className="w-full rounded-xl bg-obsidienne-light border border-champagne/15 px-2 py-1.5 text-sm focus:outline-none focus:border-champagne/40"
+                >
+                  <option value="">— Aucune —</option>
+                  {apercu.colonnesDisponibles.map((col) => (
+                    <option key={col} value={col}>
+                      {col}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="overflow-x-auto mb-4">
@@ -265,7 +290,8 @@ export default function ImportExcel() {
                         key={col}
                         className={`border-b border-champagne/10 px-2 py-1 text-left ${
                           col === colonneNomChoisie ||
-                          col === colonnePrenomChoisie
+                          col === colonnePrenomChoisie ||
+                          col === colonneMatriculeChoisie
                             ? "bg-champagne/15 text-champagne"
                             : "text-ivoire/60"
                         }`}
