@@ -160,6 +160,43 @@ export async function supprimerEleve(
   await api.delete(`/classes/${classeId}/eleves/${eleveId}`);
 }
 
+export interface NoteEleveDetail {
+  noteId: string | null;
+  devoirId: string;
+  devoirNom: string;
+  type: string;
+  date: string;
+  baremeMax: number;
+  coefficient: number;
+  valeur: number | null;
+  absent: boolean;
+  periodeId: string;
+  periodeNom: string;
+}
+
+export interface FicheEleve {
+  eleve: {
+    id: string;
+    nom: string;
+    prenom: string;
+    matricule?: string | null;
+  };
+  classeId: string;
+  notes: NoteEleveDetail[];
+  moyenne: number | null;
+}
+
+export async function obtenirFicheEleve(
+  classeId: string,
+  eleveId: string,
+  periodeId?: string
+): Promise<FicheEleve> {
+  const { data } = await api.get(`/classes/${classeId}/eleves/${eleveId}`, {
+    params: periodeId ? { periodeId } : undefined,
+  });
+  return data;
+}
+
 export type TypeDevoir = "INTERROGATION" | "DEVOIR";
 
 export interface Periode {
