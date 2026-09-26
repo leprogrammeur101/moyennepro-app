@@ -6,6 +6,7 @@ import {
   obtenirClasse,
   DonneesClasse,
 } from "../classes/classes.service";
+import { normaliserMatricule } from "../classes/eleves.service";
 import { extraireEleves } from "../import/excel-import.service";
 import { verifierLimiteClasses } from "../abonnements/abonnements.service";
 
@@ -47,7 +48,6 @@ export async function importerDepuisExcel(
     );
   }
 
-  // Unicité des matricules dans le fichier + dans la classe existante
   const repo = AppDataSource.getRepository(Eleve);
   const existants = await repo.find({ where: { classe: { id: classe.id } } });
   const matriculesExistants = new Set(
@@ -55,27 +55,49 @@ export async function importerDepuisExcel(
   );
   const vusDansFichier = new Set<string>();
 
-  for (const e of elevesExtraits) {
-    const m = e.matricule?.trim();
-    if (!m) continue;
-    if (vusDansFichier.has(m)) {
+  const elevesNormalises: {
+    nom: string;
+    prenom: string;
+    matricule?: string;
+  }[] = [];
+
+  for (let i = 0; i < elevesExtraits.length; i++) {
+    const e = elevesExtraits[i];
+    let matricule: string | undefined;
+    try {
+      matricule = normaliserMatricule(e.matricule);
+    } catch {
       throw new Error(
-        `Matricule en double dans le fichier : « ${m} ».`
+        `Ligne ${i + 1} (${e.nom} ${e.prenom}) : matricule invalide « ${e.matricule} ». Format attendu : 8 chiffres + 1 lettre (ex. 12345678A).`
       );
     }
-    if (matriculesExistants.has(m)) {
-      throw new Error(
-        `Le matricule « ${m} » existe déjà dans cette classe.`
-      );
+
+    if (matricule) {
+      if (vusDansFichier.has(matricule)) {
+        throw new Error(
+          `Matricule en double dans le fichier : « ${matricule} ».`
+        );
+      }
+      if (matriculesExistants.has(matricule)) {
+        throw new Error(
+          `Le matricule « ${matricule} » existe déjà dans cette classe.`
+        );
+      }
+      vusDansFichier.add(matricule);
     }
-    vusDansFichier.add(m);
+
+    elevesNormalises.push({
+      nom: e.nom,
+      prenom: e.prenom,
+      matricule,
+    });
   }
 
-  const eleves = elevesExtraits.map((e) =>
+  const eleves = elevesNormalises.map((e) =>
     repo.create({
       nom: e.nom,
       prenom: e.prenom,
-      matricule: e.matricule?.trim() || undefined,
+      matricule: e.matricule,
       classe,
     })
   );
