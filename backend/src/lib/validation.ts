@@ -14,6 +14,23 @@ export const schemaMotDePasse = z
   .regex(/[a-zA-Z]/, "Le mot de passe doit contenir au moins une lettre.")
   .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre.");
 
+/**
+ * Matricule : optionnel ; s'il est renseigné → 8 chiffres + 1 lettre
+ * (ex. 12345678A), sans tiret. La lettre est normalisée en majuscule.
+ */
+export const schemaMatricule = z
+  .string()
+  .trim()
+  .transform((v) => (v === "" ? undefined : v.toUpperCase()))
+  .optional()
+  .refine(
+    (v) => v === undefined || /^\d{8}[A-Z]$/.test(v),
+    {
+      message:
+        "Matricule invalide : 8 chiffres suivis d'une lettre (ex. 12345678A).",
+    }
+  );
+
 export const schemaInscription = z.object({
   nom: z.string().trim().min(1, "Le nom est requis.").max(100),
   prenom: z.string().trim().min(1, "Le prénom est requis.").max(100),
@@ -39,7 +56,7 @@ export const schemaClasse = z.object({
 export const schemaEleve = z.object({
   nom: z.string().trim().min(1, "Le nom est requis.").max(100),
   prenom: z.string().trim().min(1, "Le prénom est requis.").max(100),
-  matricule: z.string().trim().max(50).optional(),
+  matricule: schemaMatricule,
 });
 
 export const schemaDevoir = z.object({
