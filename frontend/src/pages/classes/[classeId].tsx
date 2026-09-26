@@ -3,9 +3,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   listerEleves,
-  ajouterEleve,
-  supprimerEleve,
-  Eleve,
   listerDevoirs,
   creerDevoir,
   supprimerDevoir,
@@ -25,12 +22,11 @@ export default function DetailClasse() {
   const router = useRouter();
   const { classeId } = router.query;
 
-  const [eleves, setEleves] = useState<Eleve[]>([]);
+  const [nombreEleves, setNombreEleves] = useState(0);
   const [chargementEleves, setChargementEleves] = useState(true);
-  const [nom, setNom] = useState("");
-  const [prenom, setPrenom] = useState("");
 
   const [devoirs, setDevoirs] = useState<Devoir[]>([]);
+  const [chargementDevoirs, setChargementDevoirs] = useState(true);
   const [periodes, setPeriodes] = useState<Periode[]>([]);
   const [afficherFormulaireDevoir, setAfficherFormulaireDevoir] =
     useState(false);
@@ -46,13 +42,16 @@ export default function DetailClasse() {
     if (!classeId) return;
     setChargementEleves(true);
     listerEleves(classeId as string)
-      .then(setEleves)
+      .then((liste) => setNombreEleves(liste.length))
       .finally(() => setChargementEleves(false));
   }
 
   function chargerDevoirs() {
     if (!classeId) return;
-    listerDevoirs(classeId as string).then(setDevoirs);
+    setChargementDevoirs(true);
+    listerDevoirs(classeId as string)
+      .then(setDevoirs)
+      .finally(() => setChargementDevoirs(false));
   }
 
   useEffect(() => {
@@ -63,37 +62,6 @@ export default function DetailClasse() {
       if (liste.length > 0) setPeriodeId(liste[0].id);
     });
   }, [classeId]);
-
-  async function soumettreNouvelEleve(e: React.FormEvent) {
-    e.preventDefault();
-    if (!classeId) return;
-    try {
-      await ajouterEleve(classeId as string, { nom, prenom });
-      setNom("");
-      setPrenom("");
-      chargerEleves();
-      showToast("Élève ajouté", "success");
-    } catch (err: any) {
-      showToast(
-        err?.response?.data?.message || "Impossible d'ajouter l'élève",
-        "error"
-      );
-    }
-  }
-
-  async function gererSuppressionEleve(eleveId: string) {
-    if (!classeId) return;
-    try {
-      await supprimerEleve(classeId as string, eleveId);
-      chargerEleves();
-      showToast("Élève supprimé", "success");
-    } catch (err: any) {
-      showToast(
-        err?.response?.data?.message || "Impossible de supprimer l'élève",
-        "error"
-      );
-    }
-  }
 
   async function creerPeriodeParDefaut() {
     const periode = await creerPeriode({
@@ -156,119 +124,34 @@ export default function DetailClasse() {
           ← Mes classes
         </Link>
 
-        {/* --- Élèves --- */}
         <h1 className="font-landing italic text-xl sm:text-2xl mb-4">
-          Élèves de la classe
+          Classe
         </h1>
 
-        {/* Formulaire ajout élève : empilé sur mobile, ligne sur sm+ */}
-        <form
-          onSubmit={soumettreNouvelEleve}
-          className="flex flex-col sm:flex-row gap-2 mb-4"
+        {/* Accès élèves */}
+        <Link
+          href={`/classes/${classeId}/eleves`}
+          className="flex items-center justify-between gap-3 rounded-2xl border border-champagne/10 bg-obsidienne-light p-4 mb-6 hover:border-champagne/30 transition-colors"
         >
-          <input
-            placeholder="Nom"
-            value={nom}
-            onChange={(e) => setNom(e.target.value)}
-            required
-            className="w-full sm:flex-1 min-w-0 rounded-xl bg-obsidienne-light border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
-          />
-          <input
-            placeholder="Prénom"
-            value={prenom}
-            onChange={(e) => setPrenom(e.target.value)}
-            required
-            className="w-full sm:flex-1 min-w-0 rounded-xl bg-obsidienne-light border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
-          />
-          <button
-            type="submit"
-            className="w-full sm:w-auto shrink-0 rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2.5 text-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            Ajouter
-          </button>
-        </form>
-
-        {chargementEleves ? (
-          <div className="space-y-2 mb-6">
-            <Skeleton className="h-12 w-full rounded-xl" />
-            <Skeleton className="h-12 w-full rounded-xl" />
-            <Skeleton className="h-12 w-full rounded-xl" />
+          <div className="min-w-0">
+            <p className="font-medium">Élèves</p>
+            <p className="text-sm text-ivoire/50">
+              {chargementEleves
+                ? "Chargement…"
+                : nombreEleves === 0
+                  ? "Aucun élève — ajouter ou importer"
+                  : `${nombreEleves} élève${nombreEleves > 1 ? "s" : ""}`}
+            </p>
           </div>
-        ) : eleves.length === 0 ? (
-          <p className="text-sm text-ivoire/50 mb-6 leading-relaxed">
-            Aucun élève pour l'instant — ajoute-les un par un ci-dessus, ou{" "}
-            <Link href="/import" className="underline text-champagne">
-              importe-les depuis un fichier Excel
-            </Link>
-            .
-          </p>
-        ) : (
-          <>
-            {/* Cartes — mobile */}
-            <ul className="sm:hidden space-y-2 mb-6">
-              {eleves.map((eleve) => (
-                <li
-                  key={eleve.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-champagne/10 bg-obsidienne-light px-3 py-3"
-                >
-                  <span className="text-sm font-medium min-w-0 truncate">
-                    {eleve.nom} {eleve.prenom}
-                  </span>
-                  <button
-                    onClick={() => gererSuppressionEleve(eleve.id)}
-                    className="shrink-0 text-xs text-red-400 hover:text-red-300 px-2 py-1"
-                  >
-                    Supprimer
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            {/* Tableau — tablette / desktop */}
-            <div className="hidden sm:block overflow-x-auto mb-6 -mx-1">
-              <table className="w-full text-sm border border-champagne/10 bg-obsidienne-light rounded-2xl overflow-hidden">
-                <thead>
-                  <tr>
-                    <th className="border-b border-champagne/10 px-3 py-2 text-left text-ivoire/60 font-medium">
-                      Nom
-                    </th>
-                    <th className="border-b border-champagne/10 px-3 py-2 text-left text-ivoire/60 font-medium">
-                      Prénom
-                    </th>
-                    <th className="border-b border-champagne/10 px-3 py-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {eleves.map((eleve) => (
-                    <tr key={eleve.id}>
-                      <td className="border-b border-champagne/5 px-3 py-2">
-                        {eleve.nom}
-                      </td>
-                      <td className="border-b border-champagne/5 px-3 py-2">
-                        {eleve.prenom}
-                      </td>
-                      <td className="border-b border-champagne/5 px-3 py-2 text-right">
-                        <button
-                          onClick={() => gererSuppressionEleve(eleve.id)}
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          Supprimer
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+          <span className="text-champagne text-sm shrink-0">Gérer →</span>
+        </Link>
 
         {/* --- Devoirs --- */}
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <h2 className="font-landing italic text-base sm:text-lg">
             Devoirs et interrogations
           </h2>
-          {eleves.length > 0 && (
+          {nombreEleves > 0 && (
             <button
               onClick={() => setAfficherFormulaireDevoir((v) => !v)}
               className="text-sm text-champagne shrink-0"
@@ -277,6 +160,19 @@ export default function DetailClasse() {
             </button>
           )}
         </div>
+
+        {nombreEleves === 0 && !chargementEleves && (
+          <p className="text-sm text-ivoire/50 mb-4 leading-relaxed">
+            Ajoute des élèves avant de créer des devoirs.{" "}
+            <Link
+              href={`/classes/${classeId}/eleves`}
+              className="underline text-champagne"
+            >
+              Gérer les élèves
+            </Link>
+            .
+          </p>
+        )}
 
         {afficherFormulaireDevoir && (
           <form
@@ -344,8 +240,13 @@ export default function DetailClasse() {
           </form>
         )}
 
-        {devoirs.length === 0 ? (
-          <p className="text-sm text-ivoire/50">
+        {chargementDevoirs ? (
+          <div className="space-y-2 mb-6">
+            <Skeleton className="h-14 w-full rounded-2xl" />
+            <Skeleton className="h-14 w-full rounded-2xl" />
+          </div>
+        ) : devoirs.length === 0 ? (
+          <p className="text-sm text-ivoire/50 mb-6">
             Aucun devoir créé pour cette classe.
           </p>
         ) : (
@@ -353,7 +254,7 @@ export default function DetailClasse() {
             {devoirs.map((devoir) => (
               <div
                 key={devoir.id}
-                className="flex flex-col xs:flex-row sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 rounded-2xl border border-champagne/10 bg-obsidienne-light p-3"
+                className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 rounded-2xl border border-champagne/10 bg-obsidienne-light p-3"
               >
                 <Link
                   href={`/devoirs/${devoir.id}?classeId=${classeId}`}
@@ -378,7 +279,7 @@ export default function DetailClasse() {
           </div>
         )}
 
-        {eleves.length > 0 && (
+        {nombreEleves > 0 && (
           <Link
             href={`/notes/${classeId}`}
             className="inline-flex w-full sm:w-auto justify-center rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2.5 text-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
