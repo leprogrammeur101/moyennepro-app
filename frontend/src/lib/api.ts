@@ -2,20 +2,11 @@ import axios from "axios";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api",
+  // Envoie le cookie HttpOnly (moyennepro_token) sur chaque requête cross-origin
+  withCredentials: true,
 });
 
-// Attache automatiquement le token JWT stocké après connexion
-api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-  return config;
-});
-
-// Si le token est absent, invalide ou expiré, le backend répond 401 —
+// Si la session cookie est absente, invalide ou expirée, le backend répond 401 —
 // on déconnecte proprement et on redirige vers /login au lieu de laisser
 // chaque page planter sur une erreur non gérée.
 api.interceptors.response.use(
@@ -25,21 +16,27 @@ api.interceptors.response.use(
       const pagesPubliques = ["/", "/login", "/inscription"];
       const estPagePublique = pagesPubliques.includes(window.location.pathname);
 
-      localStorage.removeItem("token");
       localStorage.removeItem("enseignant");
+      // Nettoyage legacy (anciennes sessions avec token en localStorage)
+      localStorage.removeItem("token");
 
       if (!estPagePublique) {
         window.location.href = "/login";
       }
-      return new Promise(() => { });
+      return new Promise(() => {});
     }
     return Promise.reject(erreur);
   }
 );
 
 export interface SessionAuth {
-  token: string;
-  enseignant: { id: string; nom: string; prenom: string; email: string; matiere: string | null };
+  enseignant: {
+    id: string;
+    nom: string;
+    prenom: string;
+    email: string;
+    matiere: string | null;
+  };
 }
 
 export interface Profil {
@@ -81,18 +78,38 @@ export async function inscrire(
   mot_de_passe: string,
   matiere: string
 ): Promise<SessionAuth> {
-  const { data } = await api.post("/auth/register", { nom, prenom, email, mot_de_passe, matiere });
+  const { data } = await api.post("/auth/register", {
+    nom,
+    prenom,
+    email,
+    mot_de_passe,
+    matiere,
+  });
   return data;
 }
 
-export async function connecter(email: string, mot_de_passe: string): Promise<SessionAuth> {
+export async function connecter(
+  email: string,
+  mot_de_passe: string
+): Promise<SessionAuth> {
   const { data } = await api.post("/auth/login", { email, mot_de_passe });
   return data;
 }
 
-export async function connecterAvecGoogle(credential: string): Promise<SessionAuth> {
+export async function connecterAvecGoogle(
+  credential: string
+): Promise<SessionAuth> {
   const { data } = await api.post("/auth/google", { credential });
   return data;
+}
+
+/** Déconnexion côté serveur (efface le cookie HttpOnly) + nettoyage local */
+export async function deconnecterApi(): Promise<void> {
+  try {
+    await api.post("/auth/logout");
+  } catch {
+    // Ignorer : on nettoie quand même le cache local
+  }
 }
 
 export interface Classe {
@@ -136,7 +153,10 @@ export async function ajouterEleve(
   return data;
 }
 
-export async function supprimerEleve(classeId: string, eleveId: string): Promise<void> {
+export async function supprimerEleve(
+  classeId: string,
+  eleveId: string
+): Promise<void> {
   await api.delete(`/classes/${classeId}/eleves/${eleveId}`);
 }
 
@@ -176,7 +196,9 @@ export async function listerPeriodes(): Promise<Periode[]> {
   return data;
 }
 
-export async function creerPeriode(donnees: Omit<Periode, "id">): Promise<Periode> {
+export async function creerPeriode(
+  donnees: Omit<Periode, "id">
+): Promise<Periode> {
   const { data } = await api.post("/periodes", donnees);
   return data;
 }
@@ -194,7 +216,10 @@ export async function creerDevoir(
   return data;
 }
 
-export async function supprimerDevoir(classeId: string, devoirId: string): Promise<void> {
+export async function supprimerDevoir(
+  classeId: string,
+  devoirId: string
+): Promise<void> {
   await api.delete(`/classes/${classeId}/devoirs/${devoirId}`);
 }
 
@@ -202,7 +227,9 @@ export async function obtenirGrilleSaisie(
   classeId: string,
   devoirId: string
 ): Promise<GrilleSaisie> {
-  const { data } = await api.get(`/classes/${classeId}/devoirs/${devoirId}/notes`);
+  const { data } = await api.get(
+    `/classes/${classeId}/devoirs/${devoirId}/notes`
+  );
   return data;
 }
 
@@ -227,14 +254,18 @@ export interface DonneesNouvelleClasse {
   annee_scolaire: string;
 }
 
-export async function detecterColonnesExcel(fichier: File): Promise<ApercuColonnes> {
+export async function detecterColonnesExcel(
+  fichier: File
+): Promise<ApercuColonnes> {
   const formData = new FormData();
   formData.append("fichier", fichier);
   const { data } = await api.post("/import/detecter-colonnes", formData);
   return data;
 }
 
-export type CibleImport = { classeId: string } | { donneesClasse: DonneesNouvelleClasse };
+export type CibleImport =
+  | { classeId: string }
+  | { donneesClasse: DonneesNouvelleClasse };
 
 export async function confirmerImportExcel(
   fichier: File,
@@ -257,10 +288,14 @@ export async function confirmerImportExcel(
   return data;
 }
 
-export async function telechargerPdfResultats(classeId: string, periodeId: string): Promise<Blob> {
-  const { data } = await api.get(`/classes/${classeId}/periodes/${periodeId}/export-pdf`, {
-    responseType: "blob",
-  });
+export async function telechargerPdfResultats(
+  classeId: string,
+  periodeId: string
+): Promise<Blob> {
+  const { data } = await api.get(
+    `/classes/${classeId}/periodes/${periodeId}/export-pdf`,
+    { responseType: "blob" }
+  );
   return data;
 }
 
@@ -290,16 +325,19 @@ export async function listerPlansTarifs(): Promise<PlanTarif[]> {
   return data;
 }
 
-export async function souscrireAbonnement(plan: PlanAbonnement): Promise<{ paymentUrl: string }> {
+export async function souscrireAbonnement(
+  plan: PlanAbonnement
+): Promise<{ paymentUrl: string }> {
   const { data } = await api.post("/abonnements/souscrire", { plan });
   return data;
 }
 
+/** Stocke uniquement les infos enseignant (pas le JWT — il est en cookie HttpOnly) */
 export function enregistrerSession(session: SessionAuth) {
-  localStorage.setItem("token", session.token);
   localStorage.setItem("enseignant", JSON.stringify(session.enseignant));
+  // Nettoyage legacy
+  localStorage.removeItem("token");
 }
-
 
 export interface ResultatEleve {
   eleveId: string;
@@ -319,7 +357,9 @@ export async function getResultatsClasse(
   classeId: string,
   periodeId: string
 ): Promise<ResultatClasse> {
-  const { data } = await api.get(`/classes/${classeId}/periodes/${periodeId}/resultats`);
+  const { data } = await api.get(
+    `/classes/${classeId}/periodes/${periodeId}/resultats`
+  );
   return data;
 }
 
