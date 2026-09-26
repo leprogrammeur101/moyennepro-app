@@ -14,6 +14,7 @@ export interface LigneSaisie {
   eleveId: string;
   nom: string;
   prenom: string;
+  matricule?: string | null;
   valeur: number | null;
   absent: boolean;
 }
@@ -23,10 +24,6 @@ export interface GrilleSaisie {
   lignes: LigneSaisie[];
 }
 
-/**
- * Retourne la grille de saisie : tous les élèves de la classe, avec leur
- * note existante pour ce devoir si elle a déjà été saisie.
- */
 export async function obtenirGrilleSaisie(
   enseignantId: string,
   classeId: string,
@@ -38,7 +35,7 @@ export async function obtenirGrilleSaisie(
 
   const eleves = await eleveRepo.find({
     where: { classe: { id: classeId } },
-    order: { nom: "ASC" },
+    order: { nom: "ASC", prenom: "ASC" },
   });
   const notesExistantes = await noteRepo.find({
     where: { devoir: { id: devoirId } },
@@ -52,22 +49,23 @@ export async function obtenirGrilleSaisie(
       eleveId: eleve.id,
       nom: eleve.nom,
       prenom: eleve.prenom,
+      matricule: eleve.matricule ?? null,
       valeur: note ? Number(note.valeur) : null,
       absent: note?.absent ?? false,
     };
   });
 
   return {
-    devoir: { id: devoir.id, nom: devoir.nom, type: devoir.type, baremeMax: BAREME_MAX[devoir.type] },
+    devoir: {
+      id: devoir.id,
+      nom: devoir.nom,
+      type: devoir.type,
+      baremeMax: BAREME_MAX[devoir.type],
+    },
     lignes,
   };
 }
 
-/**
- * Enregistre (crée ou met à jour) les notes de tous les élèves pour un
- * devoir donné, en une seule opération. Valide que chaque note reste
- * dans le barème du devoir (/10 pour une interrogation, /20 pour un devoir).
- */
 export async function enregistrerNotes(
   enseignantId: string,
   classeId: string,
@@ -78,7 +76,6 @@ export async function enregistrerNotes(
   const baremeMax = BAREME_MAX[devoir.type];
   const noteRepo = AppDataSource.getRepository(Note);
 
-  // Notes déjà en base pour ce devoir
   const existantes = await noteRepo.find({
     where: { devoir: { id: devoirId } },
     relations: { eleve: true },
@@ -109,7 +106,6 @@ export async function enregistrerNotes(
     aSauvegarder.push(note);
   }
 
-  // Un seul aller-retour DB
   if (aSauvegarder.length > 0) {
     await noteRepo.save(aSauvegarder);
   }
