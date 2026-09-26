@@ -19,31 +19,32 @@ export interface ResultatClasse {
 }
 
 /**
- * Calcule la moyenne pondérée d'un élève à partir de ses notes.
+ * Calcule la moyenne d'un élève à partir de ses notes.
  *
- * Règles validées avec Soro :
- * - Une note "absente" vaut 0 mais son coefficient reste inclus dans le
- *   calcul (pas d'exclusion du devoir).
- * - Les interrogations (/10, coefficient 0,5) et les devoirs (/20,
- *   coefficient 1) sont combinés avec leurs valeurs BRUTES, sans les
- *   ramener à une échelle commune — décision explicite de Soro, à garder
- *   en tête si la formule est revue plus tard.
+ * Formule (validée avec Soro) :
+ *   moyenne = somme(notes) / somme(coefficients)
+ *
+ * - On n'applique PAS note × coefficient au numérateur.
+ * - Les coefficients interviennent uniquement au dénominateur.
+ * - Une note absente vaut 0 ; son coefficient reste inclus.
+ * - Interrogations (/10, coeff 0,5) et devoirs (/20, coeff 1) sont
+ *   additionnés en valeurs brutes, sans conversion d'échelle.
  */
 function calculerMoyenne(notes: Note[]): number | null {
   if (notes.length === 0) return null;
 
-  let sommePonderee = 0;
+  let sommeNotes = 0;
   let sommeCoefficients = 0;
 
   for (const note of notes) {
     const valeur = note.absent ? 0 : Number(note.valeur);
     const coefficient = COEFFICIENT_PAR_TYPE[note.devoir.type];
-    sommePonderee += valeur * coefficient;
+    sommeNotes += valeur;
     sommeCoefficients += coefficient;
   }
 
   if (sommeCoefficients === 0) return null;
-  return Math.round((sommePonderee / sommeCoefficients) * 100) / 100;
+  return Math.round((sommeNotes / sommeCoefficients) * 100) / 100;
 }
 
 /**
@@ -68,7 +69,10 @@ export async function calculerResultatsClasse(
   const resultatsBruts = await Promise.all(
     eleves.map(async (eleve) => {
       const notes = await noteRepo.find({
-        where: { eleve: { id: eleve.id }, devoir: { classe: { id: classeId }, periode: { id: periodeId } } },
+        where: {
+          eleve: { id: eleve.id },
+          devoir: { classe: { id: classeId }, periode: { id: periodeId } },
+        },
         relations: { devoir: true },
       });
       return {
@@ -80,9 +84,13 @@ export async function calculerResultatsClasse(
   );
 
   // Complétude : proportion d'élèves ayant une note pour chaque devoir programmé
-  const eleveComplet = (nbNotes: number) => devoirsProgrammes > 0 && nbNotes >= devoirsProgrammes;
-  const nbComplets = resultatsBruts.filter((r) => eleveComplet(r.notes.length)).length;
-  const completude = eleves.length > 0 ? Math.round((nbComplets / eleves.length) * 100) : 0;
+  const eleveComplet = (nbNotes: number) =>
+    devoirsProgrammes > 0 && nbNotes >= devoirsProgrammes;
+  const nbComplets = resultatsBruts.filter((r) =>
+    eleveComplet(r.notes.length)
+  ).length;
+  const completude =
+    eleves.length > 0 ? Math.round((nbComplets / eleves.length) * 100) : 0;
 
   // Le rang n'est publié que si la classe est à 100% de complétude
   // (évite un classement faussé par des notes manquantes) — voir cahier des charges §2.3
@@ -90,7 +98,9 @@ export async function calculerResultatsClasse(
 
   let resultats: ResultatEleve[];
   if (classeComplete) {
-    const trie = [...resultatsBruts].sort((a, b) => (b.moyenne ?? -1) - (a.moyenne ?? -1));
+    const trie = [...resultatsBruts].sort(
+      (a, b) => (b.moyenne ?? -1) - (a.moyenne ?? -1)
+    );
     resultats = trie.map((r, index) => ({
       eleveId: r.eleve.id,
       nom: r.eleve.nom,
