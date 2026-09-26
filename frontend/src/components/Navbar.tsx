@@ -38,8 +38,8 @@ export default function Navbar() {
     return router.pathname === href || router.pathname.startsWith(href + "/");
   }
 
-  function gererDeconnexion() {
-    deconnecter();
+  async function gererDeconnexion() {
+    await deconnecter();
     router.push("/");
   }
 
@@ -60,10 +60,11 @@ export default function Navbar() {
             <Link
               key={onglet.href}
               href={onglet.href}
-              className={`px-3 py-2 text-sm rounded-t-md border-b-2 transition-colors ${estActif(onglet.href)
+              className={`px-3 py-2 text-sm rounded-t-md border-b-2 transition-colors ${
+                estActif(onglet.href)
                   ? "border-champagne text-ivoire bg-obsidienne-light"
                   : "border-transparent text-ivoire/60 hover:text-ivoire hover:bg-obsidienne-light/60"
-                }`}
+              }`}
             >
               {onglet.label}
             </Link>
@@ -145,8 +146,9 @@ export default function Navbar() {
               key={onglet.href}
               href={onglet.href}
               onClick={() => setMenuMobileOuvert(false)}
-              className={`block px-2 py-2 rounded text-sm ${estActif(onglet.href) ? "bg-obsidienne text-ivoire" : "text-ivoire/80"
-                }`}
+              className={`block px-2 py-2 rounded text-sm ${
+                estActif(onglet.href) ? "bg-obsidienne text-ivoire" : "text-ivoire/80"
+              }`}
             >
               {onglet.label}
             </Link>
