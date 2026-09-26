@@ -42,6 +42,53 @@ export const schemaEleve = z.object({
   matricule: z.string().trim().max(50).optional(),
 });
 
+export const schemaDevoir = z.object({
+  nom: z.string().trim().min(1, "Le nom du devoir est requis.").max(150),
+  type: z.enum(["INTERROGATION", "DEVOIR"], {
+    message: "Type de devoir invalide (INTERROGATION ou DEVOIR).",
+  }),
+  periodeId: z.string().uuid("Identifiant de période invalide."),
+  date: z.string().min(1, "La date est requise."),
+});
+
+export const schemaNoteLigne = z.object({
+  eleveId: z.string().uuid("Identifiant élève invalide."),
+  valeur: z.number().min(0, "La note ne peut pas être négative."),
+  absent: z.boolean(),
+});
+
+export const schemaEnregistrementNotes = z.object({
+  notes: z
+    .array(schemaNoteLigne)
+    .min(1, "Au moins une note est requise."),
+});
+
+export const schemaPeriode = z.object({
+  nom: z.string().trim().min(1, "Le nom de la période est requis.").max(100),
+  annee_scolaire: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{4}$/, "Format année scolaire attendu : 2026-2027."),
+  date_debut: z.string().min(1, "Date de début requise."),
+  date_fin: z.string().min(1, "Date de fin requise."),
+});
+
+export const schemaProfil = z.object({
+  nom: z.string().trim().min(1).max(100).optional(),
+  prenom: z.string().trim().min(1).max(100).optional(),
+  matiere: z.string().trim().max(100).optional(),
+});
+
+export const schemaMatiere = z.object({
+  nom: z.string().trim().min(1, "Nom de matière requis.").max(100),
+});
+
+export const schemaSouscription = z.object({
+  plan: z.enum(["TRIMESTRIEL", "ANNUEL"], {
+    message: "Plan invalide (TRIMESTRIEL ou ANNUEL).",
+  }),
+});
+
 /**
  * Parse un body avec un schéma Zod.
  * En cas d'échec, lance une Error avec le premier message lisible.
