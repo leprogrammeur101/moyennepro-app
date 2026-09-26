@@ -9,6 +9,7 @@ import {
 } from "../../../../lib/api";
 import { useRequireAuth } from "../../../../lib/useAuth";
 import Navbar from "../../../../components/Navbar";
+import BoutonRetour from "../../../../components/BoutonRetour";
 import { Skeleton, SkeletonTableau } from "../../../../components/Skeleton";
 
 export default function FicheElevePage() {
@@ -25,7 +26,6 @@ export default function FicheElevePage() {
   useEffect(() => {
     listerPeriodes().then((liste) => {
       setPeriodes(liste);
-      // Par défaut : toutes les périodes (filtre vide)
     });
   }, []);
 
@@ -52,12 +52,10 @@ export default function FicheElevePage() {
     <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans overflow-x-hidden">
       <Navbar />
       <main className="px-4 py-5 sm:p-6 max-w-xl mx-auto w-full">
-        <Link
+        <BoutonRetour
           href={`/classes/${classeId}/eleves`}
-          className="text-sm text-ivoire/50 mb-4 inline-block hover:text-champagne transition-colors"
-        >
-          ← Liste des élèves
-        </Link>
+          label="Liste des élèves"
+        />
 
         {chargement ? (
           <div>
