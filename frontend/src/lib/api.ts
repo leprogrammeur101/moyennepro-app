@@ -358,6 +358,8 @@ export interface Abonnement {
   statut: StatutAbonnement;
   date_debut: string;
   date_fin?: string;
+  /** true si BETA_GRATUIT=true côté serveur (limites levées) */
+  modeBeta?: boolean;
 }
 
 export interface PlanTarif {
