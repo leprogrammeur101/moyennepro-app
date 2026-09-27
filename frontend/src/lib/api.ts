@@ -10,7 +10,13 @@ api.interceptors.response.use(
   (reponse) => reponse,
   (erreur) => {
     if (erreur?.response?.status === 401 && typeof window !== "undefined") {
-      const pagesPubliques = ["/", "/login", "/inscription"];
+      const pagesPubliques = [
+        "/",
+        "/login",
+        "/inscription",
+        "/mot-de-passe-oublie",
+        "/reinitialiser-mot-de-passe",
+      ];
       const estPagePublique = pagesPubliques.includes(window.location.pathname);
 
       localStorage.removeItem("enseignant");
@@ -105,6 +111,17 @@ export async function deconnecterApi(): Promise<void> {
   } catch {
     // Ignorer
   }
+}
+
+export async function demanderReinitialisation(email: string): Promise<void> {
+  await api.post("/auth/forgot-password", { email });
+}
+
+export async function reinitialiserMotDePasse(
+  token: string,
+  mot_de_passe: string
+): Promise<void> {
+  await api.post("/auth/reset-password", { token, mot_de_passe });
 }
 
 export interface Classe {
