@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import { exigerAuthentification, RequeteAuthentifiee } from "../auth/auth.middleware";
 import { creerDevoir, listerDevoirs, supprimerDevoir } from "./devoirs.service";
 import { obtenirGrilleSaisie, enregistrerNotes } from "./saisie.service";
+import { TypeDevoir } from "../../entities/Devoir";
 import {
   parserOuErreur,
   schemaDevoir,
@@ -14,7 +15,10 @@ devoirsRouter.use(exigerAuthentification);
 devoirsRouter.post("/classes/:classeId/devoirs", async (req: RequeteAuthentifiee, res: Response) => {
   try {
     const donnees = parserOuErreur(schemaDevoir, req.body);
-    const devoir = await creerDevoir(req.enseignantId!, req.params.classeId, donnees);
+    const devoir = await creerDevoir(req.enseignantId!, req.params.classeId, {
+      ...donnees,
+      type: donnees.type as TypeDevoir,
+    });
     res.status(201).json(devoir);
   } catch (err: any) {
     res.status(400).json({ message: err.message });
