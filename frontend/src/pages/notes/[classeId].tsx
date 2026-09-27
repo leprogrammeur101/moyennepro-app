@@ -14,6 +14,13 @@ import { Skeleton, SkeletonTableau } from "../../components/Skeleton";
 import ModaleUpgrade from "../../components/ModaleUpgrade";
 import { useToast } from "../../components/Toast";
 
+function echapperCsv(valeur: string): string {
+  if (/[",\n\r]/.test(valeur)) {
+    return `"${valeur.replace(/"/g, '""')}"`;
+  }
+  return valeur;
+}
+
 export default function ResultatsClasse() {
   useRequireAuth();
   const router = useRouter();
@@ -42,6 +49,39 @@ export default function ResultatsClasse() {
       .then(setResultats)
       .finally(() => setChargement(false));
   }, [classeId, periodeId]);
+
+  function exporterCsv() {
+    if (!resultats) return;
+    const periode = periodes.find((p) => p.id === periodeId);
+    const nomPeriode = periode
+      ? `${periode.nom}_${periode.annee_scolaire}`.
+          replace(/\s+/g, "_")
+          .replace(/[^\w\-.]/g, "")
+      : "periode";
+
+    const enTete = ["Matricule", "Nom", "Prénom", "Moyenne", "Rang"];
+    const lignes = resultats.resultats.map((r) =>
+      [
+        echapperCsv(r.matricule || ""),
+        echapperCsv(r.nom),
+        echapperCsv(r.prenom),
+        r.moyenne !== null && r.moyenne !== undefined ? String(r.moyenne) : "",
+        r.rang !== null && r.rang !== undefined ? String(r.rang) : "",
+      ].join(";")
+    );
+
+    // BOM UTF-8 + séparateur ; pour ouverture correcte dans Excel FR/CI
+    const contenu =
+      "\uFEFF" + [enTete.join(";"), ...lignes].join("\r\n") + "\r\n";
+    const blob = new Blob([contenu], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const lien = document.createElement("a");
+    lien.href = url;
+    lien.download = `resultats_${nomPeriode}.csv`;
+    lien.click();
+    window.URL.revokeObjectURL(url);
+    showToast("CSV téléchargé", "success");
+  }
 
   async function telechargerPdf() {
     if (!classeId || !periodeId) return;
@@ -147,7 +187,7 @@ export default function ResultatsClasse() {
                       {r.nom} {r.prenom}
                     </span>
                     {r.matricule && (
-                      <span className="block text-xs text-ivoire/45">
+                      <span className="block text-xs text-ivoire/45 font-mono">
                         {r.matricule}
                       </span>
                     )}
@@ -191,7 +231,7 @@ export default function ResultatsClasse() {
                           {r.nom} {r.prenom}
                         </span>
                         {r.matricule && (
-                          <span className="text-xs text-ivoire/45">
+                          <span className="text-xs text-ivoire/45 font-mono">
                             {r.matricule}
                           </span>
                         )}
@@ -214,13 +254,21 @@ export default function ResultatsClasse() {
               </table>
             </div>
 
-            <button
-              onClick={telechargerPdf}
-              disabled={export_}
-              className="w-full sm:w-auto rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2.5 text-sm transition-all hover:scale-[1.02] disabled:opacity-60"
-            >
-              {export_ ? "Génération…" : "Télécharger le PDF"}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={exporterCsv}
+                className="w-full sm:w-auto rounded-xl border border-champagne/25 px-4 py-2.5 text-sm hover:border-champagne/50 transition-colors"
+              >
+                Exporter Excel (CSV)
+              </button>
+              <button
+                onClick={telechargerPdf}
+                disabled={export_}
+                className="w-full sm:w-auto rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2.5 text-sm transition-all hover:scale-[1.02] disabled:opacity-60"
+              >
+                {export_ ? "Génération…" : "Télécharger le PDF"}
+              </button>
+            </div>
           </>
         )}
       </main>
