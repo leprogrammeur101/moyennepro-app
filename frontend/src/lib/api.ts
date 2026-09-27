@@ -148,6 +148,18 @@ export async function ajouterEleve(
   return data;
 }
 
+export async function modifierEleve(
+  classeId: string,
+  eleveId: string,
+  donnees: Partial<Omit<Eleve, "id">>
+): Promise<Eleve> {
+  const { data } = await api.put(
+    `/classes/${classeId}/eleves/${eleveId}`,
+    donnees
+  );
+  return data;
+}
+
 export async function supprimerEleve(
   classeId: string,
   eleveId: string
