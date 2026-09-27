@@ -233,7 +233,7 @@ export default function Landing() {
 
         <div className="relative z-10 max-w-3xl">
           <p className="uppercase tracking-[0.25em] text-xs text-champagne/80 mb-6">
-            Collège &amp; lycée — Côte d'Ivoire
+            Collège & lycée — Côte d'Ivoire
           </p>
           <h1 ref={heroTitreRef}>
             <span className="block font-landing-sans font-medium text-2xl md:text-3xl text-ivoire/85 mb-1">
@@ -317,16 +317,16 @@ export default function Landing() {
       </section>
 
       {/* PROTOCOLE — sticky scroll */}
-      <section className="relative z-10 max-w-5xl mx-auto px-6 py-28">
+      <section className="relative z-10 max-w-5xl mx-auto px-6 py-20">
         <p className="uppercase tracking-[0.2em] text-xs text-champagne/70 mb-3">Le protocole</p>
-        <h2 className="font-landing italic text-3xl md:text-4xl mb-16 max-w-lg">
+        <h2 className="font-landing italic text-3xl md:text-4xl mb-12 max-w-lg">
           De la liste d'élèves au bulletin.
         </h2>
 
         <div className="grid md:grid-cols-2 gap-12">
           <div>
             {ETAPES.map((etape, i) => (
-              <div key={etape.numero} id={`etape-${i}`} className="min-h-[70vh] flex flex-col justify-center">
+              <div key={etape.numero} id={`etape-${i}`} className="min-h-[45vh] flex flex-col justify-center">
                 <span className="text-champagne/50 font-landing italic text-sm mb-3">{etape.numero}</span>
                 <h3 className="font-landing italic text-3xl mb-4">{etape.titre}</h3>
                 <p className="text-ivoire/55 max-w-sm leading-relaxed">{etape.description}</p>
