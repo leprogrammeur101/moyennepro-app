@@ -3,19 +3,30 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRequireAuth } from "../lib/useAuth";
 import Navbar from "../components/Navbar";
-import { obtenirDashboard, DashboardData } from "../lib/api";
+import {
+  obtenirDashboard,
+  obtenirAbonnementActif,
+  DashboardData,
+} from "../lib/api";
 import { Skeleton, SkeletonCarte } from "../components/Skeleton";
 
 export default function Dashboard() {
   useRequireAuth();
 
   const [data, setData] = useState<DashboardData | null>(null);
+  const [modeBeta, setModeBeta] = useState(true);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
 
   useEffect(() => {
-    obtenirDashboard()
-      .then(setData)
+    Promise.all([
+      obtenirDashboard(),
+      obtenirAbonnementActif().catch(() => null),
+    ])
+      .then(([dash, abo]) => {
+        setData(dash);
+        setModeBeta(abo?.modeBeta !== false);
+      })
       .catch(() => setErreur("Impossible de charger le tableau de bord."))
       .finally(() => setChargement(false));
   }, []);
@@ -158,7 +169,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {resume.nombreClasses >= 2 && (
+        {!modeBeta && resume.nombreClasses >= 2 && (
           <div className="mb-6 rounded-xl border border-champagne/20 bg-champagne/5 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
             <p className="text-sm text-ivoire/70">
               Tu utilises {resume.nombreClasses}/2 classes gratuites
