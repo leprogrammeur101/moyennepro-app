@@ -17,6 +17,15 @@ const DUREE_JOURS: Partial<Record<PlanAbonnement, number>> = {
 };
 
 /**
+ * Mode beta : tout le monde a les capacités illimitées du plan gratuit.
+ * Activer avec BETA_GRATUIT=true dans .env — désactiver pour la monétisation.
+ */
+export function estModeBetaGratuit(): boolean {
+  const v = (process.env.BETA_GRATUIT || "").toLowerCase().trim();
+  return v === "true" || v === "1" || v === "yes";
+}
+
+/**
  * Retourne l'abonnement actif de l'enseignant. S'il n'en a aucun (ou que
  * le précédent a expiré), retourne un plan GRATUIT "virtuel" — le plan
  * gratuit n'a pas besoin d'être persisté en base, c'est l'état par défaut.
@@ -56,6 +65,12 @@ export async function initierSouscription(
   enseignantId: string,
   plan: PlanAbonnement
 ): Promise<{ paymentUrl: string }> {
+  if (estModeBetaGratuit()) {
+    throw new Error(
+      "Les abonnements payants seront bientôt disponibles. Pour l'instant, tout est gratuit."
+    );
+  }
+
   if (plan === PlanAbonnement.GRATUIT) {
     throw new Error("Le plan gratuit ne nécessite pas de paiement.");
   }
@@ -139,13 +154,25 @@ export const LIMITES_PLAN = {
   },
 };
 
+function limitesEffectives(plan: PlanAbonnement): {
+  maxClasses: number;
+  maxPdfParMois: number;
+} {
+  if (estModeBetaGratuit()) {
+    return { maxClasses: Infinity, maxPdfParMois: Infinity };
+  }
+  return LIMITES_PLAN[plan];
+}
+
 /**
  * Vérifie si l'enseignant peut créer une nouvelle classe.
  * Lance une erreur 403 si la limite du plan gratuit est atteinte.
  */
 export async function verifierLimiteClasses(enseignantId: string): Promise<void> {
+  if (estModeBetaGratuit()) return;
+
   const abonnement = await obtenirAbonnementActif(enseignantId);
-  const limite = LIMITES_PLAN[abonnement.plan].maxClasses;
+  const limite = limitesEffectives(abonnement.plan).maxClasses;
 
   if (limite === Infinity) return;
 
@@ -173,8 +200,10 @@ export async function verifierLimiteClasses(enseignantId: string): Promise<void>
 export async function verifierEtCompterExportPdf(
   enseignantId: string
 ): Promise<void> {
+  if (estModeBetaGratuit()) return;
+
   const abonnement = await obtenirAbonnementActif(enseignantId);
-  const limite = LIMITES_PLAN[abonnement.plan].maxPdfParMois;
+  const limite = limitesEffectives(abonnement.plan).maxPdfParMois;
 
   // Plans payants : illimité
   if (limite === Infinity) return;
