@@ -7,6 +7,7 @@ import {
   estModeBetaGratuit,
   PRIX_PLAN,
 } from "./abonnements.service";
+import { PlanAbonnement } from "../../entities/Abonnement";
 import { parserOuErreur, schemaSouscription } from "../../lib/validation";
 
 export const abonnementsRouter = Router();
@@ -33,7 +34,10 @@ abonnementsRouter.post(
   async (req: RequeteAuthentifiee, res: Response) => {
     try {
       const { plan } = parserOuErreur(schemaSouscription, req.body);
-      const resultat = await initierSouscription(req.enseignantId!, plan);
+      const resultat = await initierSouscription(
+        req.enseignantId!,
+        plan as PlanAbonnement
+      );
       res.json(resultat);
     } catch (err: any) {
       res.status(400).json({ message: err.message });
