@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   obtenirFicheEleve,
+  modifierEleve,
   listerPeriodes,
   FicheEleve,
   Periode,
@@ -11,11 +12,15 @@ import { useRequireAuth } from "../../../../lib/useAuth";
 import Navbar from "../../../../components/Navbar";
 import BoutonRetour from "../../../../components/BoutonRetour";
 import { Skeleton, SkeletonTableau } from "../../../../components/Skeleton";
+import { useToast } from "../../../../components/Toast";
+
+const REGEX_MATRICULE = /^\d{8}[A-Za-z]$/;
 
 export default function FicheElevePage() {
   useRequireAuth();
   const router = useRouter();
   const { classeId, eleveId } = router.query;
+  const { showToast } = useToast();
 
   const [fiche, setFiche] = useState<FicheEleve | null>(null);
   const [periodes, setPeriodes] = useState<Periode[]>([]);
@@ -23,13 +28,19 @@ export default function FicheElevePage() {
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
 
+  const [edition, setEdition] = useState(false);
+  const [nom, setNom] = useState("");
+  const [prenom, setPrenom] = useState("");
+  const [matricule, setMatricule] = useState("");
+  const [sauvegarde, setSauvegarde] = useState(false);
+
   useEffect(() => {
     listerPeriodes().then((liste) => {
       setPeriodes(liste);
     });
   }, []);
 
-  useEffect(() => {
+  function chargerFiche() {
     if (!classeId || !eleveId) return;
     setChargement(true);
     setErreur(null);
@@ -38,7 +49,12 @@ export default function FicheElevePage() {
       eleveId as string,
       periodeId || undefined
     )
-      .then(setFiche)
+      .then((f) => {
+        setFiche(f);
+        setNom(f.eleve.nom);
+        setPrenom(f.eleve.prenom);
+        setMatricule(f.eleve.matricule || "");
+      })
       .catch((err: any) => {
         setErreur(
           err?.response?.data?.message || "Impossible de charger la fiche."
@@ -46,7 +62,44 @@ export default function FicheElevePage() {
         setFiche(null);
       })
       .finally(() => setChargement(false));
+  }
+
+  useEffect(() => {
+    chargerFiche();
   }, [classeId, eleveId, periodeId]);
+
+  async function enregistrerModifications(e: React.FormEvent) {
+    e.preventDefault();
+    if (!classeId || !eleveId) return;
+
+    const mat = matricule.trim().toUpperCase();
+    if (mat && !REGEX_MATRICULE.test(mat)) {
+      showToast(
+        "Matricule invalide : 8 chiffres + 1 lettre (ex. 12345678A)",
+        "error"
+      );
+      return;
+    }
+
+    setSauvegarde(true);
+    try {
+      await modifierEleve(classeId as string, eleveId as string, {
+        nom: nom.trim(),
+        prenom: prenom.trim(),
+        matricule: mat || undefined,
+      });
+      showToast("Élève mis à jour", "success");
+      setEdition(false);
+      chargerFiche();
+    } catch (err: any) {
+      showToast(
+        err?.response?.data?.message || "Impossible de modifier l'élève",
+        "error"
+      );
+    } finally {
+      setSauvegarde(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans overflow-x-hidden">
@@ -70,16 +123,83 @@ export default function FicheElevePage() {
           <p className="text-sm text-ivoire/50">Élève introuvable.</p>
         ) : (
           <>
-            <h1 className="font-landing italic text-xl sm:text-2xl mb-1">
-              {fiche.eleve.nom} {fiche.eleve.prenom}
-            </h1>
-            {fiche.eleve.matricule && (
-              <p className="text-sm text-ivoire/50 mb-1">
-                Matricule : {fiche.eleve.matricule}
-              </p>
+            {edition ? (
+              <form
+                onSubmit={enregistrerModifications}
+                className="mb-6 space-y-3 rounded-2xl border border-champagne/15 bg-obsidienne-light p-4"
+              >
+                <p className="text-sm font-medium text-champagne mb-1">
+                  Modifier l'élève
+                </p>
+                <input
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  required
+                  placeholder="Nom"
+                  className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
+                />
+                <input
+                  value={prenom}
+                  onChange={(e) => setPrenom(e.target.value)}
+                  required
+                  placeholder="Prénom"
+                  className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
+                />
+                <input
+                  value={matricule}
+                  onChange={(e) => setMatricule(e.target.value.toUpperCase())}
+                  placeholder="12345678A (optionnel)"
+                  maxLength={9}
+                  title="8 chiffres + 1 lettre"
+                  className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm font-mono placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
+                />
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                  <button
+                    type="submit"
+                    disabled={sauvegarde}
+                    className="w-full sm:w-auto rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2.5 text-sm disabled:opacity-60"
+                  >
+                    {sauvegarde ? "Enregistrement…" : "Enregistrer"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEdition(false);
+                      setNom(fiche.eleve.nom);
+                      setPrenom(fiche.eleve.prenom);
+                      setMatricule(fiche.eleve.matricule || "");
+                    }}
+                    className="w-full sm:w-auto rounded-xl border border-champagne/20 px-4 py-2.5 text-sm"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="mb-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h1 className="font-landing italic text-xl sm:text-2xl mb-1">
+                      {fiche.eleve.nom} {fiche.eleve.prenom}
+                    </h1>
+                    {fiche.eleve.matricule && (
+                      <p className="text-sm text-ivoire/50 font-mono">
+                        {fiche.eleve.matricule}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEdition(true)}
+                    className="shrink-0 text-sm text-champagne/90 hover:text-champagne underline-offset-2 hover:underline"
+                  >
+                    Modifier
+                  </button>
+                </div>
+              </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-3 mt-3 mb-5">
+            <div className="flex flex-wrap items-center gap-3 mt-1 mb-5">
               <div className="rounded-xl border border-champagne/20 bg-champagne/10 px-3 py-2">
                 <p className="text-xs text-ivoire/50">Moyenne</p>
                 <p className="text-lg font-medium text-champagne">
