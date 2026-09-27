@@ -62,19 +62,81 @@ export default function Dashboard() {
   }
 
   const { resume, saisiesEnAttente, classes } = data;
+  const debutant = resume.nombreClasses === 0;
 
   return (
     <div className="min-h-screen bg-obsidienne text-ivoire font-landing-sans">
       <Navbar />
 
       <main className="p-6 max-w-2xl mx-auto">
-        {/* En-tête */}
         <div className="mb-8">
           <h1 className="font-landing italic text-3xl mb-1">Tableau de bord</h1>
           <p className="text-sm text-ivoire/50">{resume.periodeEnCours}</p>
         </div>
 
-        {/* Résumé rapide */}
+        {debutant && (
+          <section className="mb-8 rounded-2xl border border-champagne/25 bg-gradient-to-br from-champagne/10 to-transparent p-5">
+            <h2 className="font-landing italic text-xl text-champagne mb-2">
+              Bienvenue sur MoyennePro
+            </h2>
+            <p className="text-sm text-ivoire/70 mb-4 leading-relaxed">
+              En 3 étapes, tu es prêt à saisir tes notes et calculer les
+              moyennes.
+            </p>
+            <ol className="space-y-3 mb-5">
+              <li className="flex gap-3 items-start">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-champagne text-obsidienne text-sm font-semibold">
+                  1
+                </span>
+                <div>
+                  <p className="text-sm font-medium">Crée ta première classe</p>
+                  <p className="text-xs text-ivoire/50">
+                    Ex. 3ème A — ou importe une liste Excel
+                  </p>
+                </div>
+              </li>
+              <li className="flex gap-3 items-start">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-champagne/30 text-champagne text-sm font-semibold">
+                  2
+                </span>
+                <div>
+                  <p className="text-sm font-medium">Ajoute tes élèves</p>
+                  <p className="text-xs text-ivoire/50">
+                    À la main ou via import (matricule optionnel)
+                  </p>
+                </div>
+              </li>
+              <li className="flex gap-3 items-start">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-champagne/30 text-champagne text-sm font-semibold">
+                  3
+                </span>
+                <div>
+                  <p className="text-sm font-medium">
+                    Crée un devoir et saisis les notes
+                  </p>
+                  <p className="text-xs text-ivoire/50">
+                    Moyennes et rangs se calculent automatiquement
+                  </p>
+                </div>
+              </li>
+            </ol>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Link
+                href="/classes"
+                className="text-center rounded-xl bg-champagne text-obsidienne font-medium px-4 py-2.5 text-sm transition-all hover:scale-[1.02]"
+              >
+                Créer ma première classe
+              </Link>
+              <Link
+                href="/import"
+                className="text-center rounded-xl border border-champagne/30 px-4 py-2.5 text-sm hover:border-champagne/50 transition-colors"
+              >
+                Importer depuis Excel
+              </Link>
+            </div>
+          </section>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
           <div className="rounded-2xl border border-champagne/10 bg-obsidienne-light p-4 text-center">
             <p className="text-2xl font-semibold text-champagne">
@@ -95,8 +157,9 @@ export default function Dashboard() {
             <p className="text-xs text-ivoire/50 mt-1">Saisies en cours</p>
           </div>
         </div>
+
         {resume.nombreClasses >= 2 && (
-          <div className="mb-6 rounded-xl border border-champagne/20 bg-champagne/5 px-4 py-3 flex items-center justify-between">
+          <div className="mb-6 rounded-xl border border-champagne/20 bg-champagne/5 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
             <p className="text-sm text-ivoire/70">
               Tu utilises {resume.nombreClasses}/2 classes gratuites
             </p>
@@ -108,7 +171,7 @@ export default function Dashboard() {
             </Link>
           </div>
         )}
-        {/* Saisies en attente */}
+
         <section className="mb-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-medium text-lg">Saisies en attente</h2>
@@ -166,7 +229,6 @@ export default function Dashboard() {
           )}
         </section>
 
-        {/* Mes classes */}
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-medium text-lg">Mes classes</h2>
@@ -175,7 +237,7 @@ export default function Dashboard() {
           {classes.length === 0 ? (
             <div className="rounded-2xl border border-champagne/10 bg-obsidienne-light p-6 text-center mb-6">
               <p className="text-sm text-ivoire/50 mb-3">
-                Aucune classe pour l’instant.
+                Aucune classe pour l'instant.
               </p>
               <Link
                 href="/classes"
