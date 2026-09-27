@@ -4,6 +4,7 @@ import {
   obtenirAbonnementActif,
   initierSouscription,
   confirmerPaiement,
+  estModeBetaGratuit,
   PRIX_PLAN,
 } from "./abonnements.service";
 import { parserOuErreur, schemaSouscription } from "../../lib/validation";
@@ -15,7 +16,10 @@ abonnementsRouter.get(
   exigerAuthentification,
   async (req: RequeteAuthentifiee, res: Response) => {
     const abonnement = await obtenirAbonnementActif(req.enseignantId!);
-    res.json(abonnement);
+    res.json({
+      ...abonnement,
+      modeBeta: estModeBetaGratuit(),
+    });
   }
 );
 
