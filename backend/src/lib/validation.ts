@@ -47,6 +47,15 @@ export const schemaConnexion = z.object({
   mot_de_passe: z.string().min(1, "Mot de passe requis."),
 });
 
+export const schemaMotDePasseOublie = z.object({
+  email: schemaEmail,
+});
+
+export const schemaReinitialiserMotDePasse = z.object({
+  token: z.string().min(1, "Token manquant."),
+  mot_de_passe: schemaMotDePasse,
+});
+
 export const schemaClasse = z.object({
   nom: z.string().trim().min(1, "Le nom de la classe est requis.").max(100),
   niveau: z.string().trim().min(1, "Le niveau est requis.").max(50),

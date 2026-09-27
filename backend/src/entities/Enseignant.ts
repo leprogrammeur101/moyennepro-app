@@ -33,6 +33,14 @@ export class Enseignant {
   @Column({ unique: true, nullable: true })
   google_id?: string;
 
+  /** Hash du token de réinitialisation (jamais stocké en clair) */
+  @Column({ type: "varchar", nullable: true })
+  reset_token_hash?: string | null;
+
+  /** Expiration du token de réinitialisation */
+  @Column({ type: "timestamptz", nullable: true })
+  reset_token_expires?: Date | null;
+
   @ManyToOne(() => Matiere, (matiere) => matiere.enseignants, { eager: true, nullable: true })
   matiere?: Matiere;
 

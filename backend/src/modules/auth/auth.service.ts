@@ -1,13 +1,18 @@
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import { AppDataSource } from "../../data-source";
 import { Enseignant } from "../../entities/Enseignant";
 import { obtenirOuCreerMatiere } from "../matieres/matieres.service";
+import { envoyerEmailReinitialisation } from "../../lib/email";
 
 const JWT_SECRET = process.env.JWT_SECRET || "change_this_secret_in_production";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+/** Durée de validité du token de reset (1 heure) */
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 /** Mot de passe : min 8 caractères, au moins une lettre et un chiffre */
 function validerMotDePasse(motDePasse: string): void {
@@ -148,6 +153,65 @@ export async function connecterAvecGoogle(
   }
 
   return versSession(enseignant, genererToken(enseignant));
+}
+
+/**
+ * Demande de réinitialisation : génère un token, le stocke hashé, envoie l'email.
+ * Réponse toujours générique (ne pas révéler si l'email existe).
+ */
+export async function demanderReinitialisation(email: string): Promise<void> {
+  const repo = AppDataSource.getRepository(Enseignant);
+  const enseignant = await repo.findOne({ where: { email } });
+
+  // Compte inexistant ou purement Google (pas de mot de passe local)
+  if (!enseignant || !enseignant.mot_de_passe_hash) {
+    return;
+  }
+
+  const tokenBrut = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(tokenBrut).digest("hex");
+
+  enseignant.reset_token_hash = tokenHash;
+  enseignant.reset_token_expires = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+  await repo.save(enseignant);
+
+  await envoyerEmailReinitialisation(
+    enseignant.email,
+    enseignant.prenom,
+    tokenBrut
+  );
+}
+
+/**
+ * Réinitialise le mot de passe à partir du token reçu par email.
+ */
+export async function reinitialiserMotDePasse(
+  token: string,
+  nouveauMotDePasse: string
+): Promise<void> {
+  validerMotDePasse(nouveauMotDePasse);
+
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const repo = AppDataSource.getRepository(Enseignant);
+
+  const enseignant = await repo.findOne({
+    where: { reset_token_hash: tokenHash },
+  });
+
+  if (
+    !enseignant ||
+    !enseignant.reset_token_expires ||
+    enseignant.reset_token_expires.getTime() < Date.now()
+  ) {
+    throw new Error(
+      "Lien de réinitialisation invalide ou expiré. Demandez-en un nouveau."
+    );
+  }
+
+  enseignant.mot_de_passe_hash = await bcrypt.hash(nouveauMotDePasse, 10);
+  enseignant.reset_token_hash = null;
+  enseignant.reset_token_expires = null;
+  await repo.save(enseignant);
 }
 
 export function verifierToken(token: string): { sub: string; email: string } {
