@@ -74,6 +74,14 @@ export default function Connexion() {
             required
             className="w-full rounded-xl bg-obsidienne border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40"
           />
+          <div className="text-right">
+            <Link
+              href="/mot-de-passe-oublie"
+              className="text-xs text-champagne/80 hover:text-champagne hover:underline"
+            >
+              Mot de passe oublié ?
+            </Link>
+          </div>
           {erreur && <p className="text-sm text-red-400">{erreur}</p>}
           <button
             type="submit"
