@@ -139,8 +139,8 @@ export default function Landing() {
       [0, 1, 2].forEach((i) => {
         ScrollTrigger.create({
           trigger: `#etape-${i}`,
-          start: "top center",
-          end: "bottom center",
+          start: "top 60%",
+          end: "bottom 40%",
           onEnter: () => setEtapeActive(i),
           onEnterBack: () => setEtapeActive(i),
         });
@@ -324,11 +324,11 @@ export default function Landing() {
         </h2>
 
         <div className="grid md:grid-cols-2 gap-12">
-          <div>
+          <div className="space-y-10">
             {ETAPES.map((etape, i) => (
-              <div key={etape.numero} id={`etape-${i}`} className="min-h-[30vh] flex flex-col justify-center">
-                <span className="text-champagne/50 font-landing italic text-sm mb-3">{etape.numero}</span>
-                <h3 className="font-landing italic text-3xl mb-4">{etape.titre}</h3>
+              <div key={etape.numero} id={`etape-${i}`} className="py-6">
+                <span className="text-champagne/50 font-landing italic text-sm mb-3 block">{etape.numero}</span>
+                <h3 className="font-landing italic text-3xl mb-3">{etape.titre}</h3>
                 <p className="text-ivoire/55 max-w-sm leading-relaxed">{etape.description}</p>
               </div>
             ))}
