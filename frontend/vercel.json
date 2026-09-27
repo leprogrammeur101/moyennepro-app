@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://moyennepro-app.onrender.com/api/:path*"
+    }
+  ]
+}
