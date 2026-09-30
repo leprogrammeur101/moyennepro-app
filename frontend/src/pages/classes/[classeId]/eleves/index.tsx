@@ -172,7 +172,7 @@ export default function ListeElevesClasse() {
             value={matricule}
             onChange={(e) => setMatricule(e.target.value.toUpperCase())}
             maxLength={9}
-            pattern="\\d{8}[A-Za-z]"
+            pattern="[0-9]{8}[A-Za-z]"
             className="w-full sm:flex-1 min-w-0 rounded-xl bg-obsidienne-light border border-champagne/15 px-3 py-2.5 text-sm placeholder:text-ivoire/30 focus:outline-none focus:border-champagne/40 font-mono"
           />
           <button
