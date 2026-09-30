@@ -77,6 +77,13 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
+// Health check PUBLIC — doit rester avant tout router protégé.
+// Les routers avec router.use(exigerAuthentification) interceptent
+// toutes les requêtes /api/* s'ils sont montés avant cette route.
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
 // Rate-limit strict sur les routes d'authentification
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -97,10 +104,6 @@ app.use("/api", abonnementsRouter);
 app.use("/api", matieresRouter);
 app.use("/api", enseignantRouter);
 app.use("/api", notesRouter);
-
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok" });
-});
 
 const PORT = process.env.PORT || 4000;
 

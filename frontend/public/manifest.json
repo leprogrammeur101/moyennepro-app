@@ -1,11 +1,11 @@
 {
   "name": "MoyennePro",
   "short_name": "MoyennePro",
-  "description": "Calcul automatique de moyenne et de rang par matière",
+  "description": "Calcul automatique de moyenne et de rang par matière — collège et lycée, Côte d'Ivoire",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0D0D12",
-  "theme_color": "#0D0D12",
+  "theme_color": "#C9A84C",
   "icons": [
     {
       "src": "/icons/icon-192.png",
