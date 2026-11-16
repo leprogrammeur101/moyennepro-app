@@ -1,5 +1,5 @@
 import { useRouter } from "next/router";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   obtenirGrilleSaisie,
@@ -164,6 +164,62 @@ export default function SaisieNotes() {
   const totalEleves = lignes.length;
   const progression = totalEleves > 0 ? (notesSaisies / totalEleves) * 100 : 0;
   const estComplet = notesSaisies === totalEleves && totalEleves > 0;
+
+  /** Statistiques de la note (devoir) — calculées en direct depuis la grille */
+  const stats = useMemo(() => {
+    const absents = lignes.filter((l) => l.absent).length;
+
+    // Notes réellement saisies (hors absents) → min / max / réussite
+    const notesSaisiesValeurs: number[] = [];
+    // Toutes les notes comptées dans la moyenne (absents = 0)
+    const pourMoyenne: number[] = [];
+
+    for (const l of lignes) {
+      if (l.absent) {
+        pourMoyenne.push(0);
+      } else if (l.valeur !== null && l.valeur !== undefined) {
+        const v = Number(l.valeur);
+        notesSaisiesValeurs.push(v);
+        pourMoyenne.push(v);
+      }
+    }
+
+    if (pourMoyenne.length === 0) {
+      return {
+        absents,
+        notesComptees: 0,
+        moyenne: null as number | null,
+        min: null as number | null,
+        max: null as number | null,
+        reussite: null as number | null,
+      };
+    }
+
+    const somme = pourMoyenne.reduce((a, b) => a + b, 0);
+    const moyenne = Math.round((somme / pourMoyenne.length) * 100) / 100;
+
+    let min: number | null = null;
+    let max: number | null = null;
+    let reussite: number | null = null;
+
+    if (notesSaisiesValeurs.length > 0) {
+      min = Math.min(...notesSaisiesValeurs);
+      max = Math.max(...notesSaisiesValeurs);
+      const seuil = baremeMax / 2;
+      const nbReussite = notesSaisiesValeurs.filter((v) => v >= seuil).length;
+      reussite =
+        Math.round((nbReussite / notesSaisiesValeurs.length) * 1000) / 10;
+    }
+
+    return {
+      absents,
+      notesComptees: pourMoyenne.length,
+      moyenne,
+      min,
+      max,
+      reussite,
+    };
+  }, [lignes, baremeMax]);
 
   const sauvegarderNote = useCallback(
     async (ligne: LigneSaisie) => {
@@ -407,6 +463,57 @@ export default function SaisieNotes() {
             <p className="text-xs text-ivoire/40 mt-2">
               Sauvegarde automatique activée
             </p>
+          </div>
+        )}
+
+        {/* Statistiques de la note */}
+        {stats.notesComptees > 0 && (
+          <div className="mb-6 rounded-2xl border border-champagne/15 bg-obsidienne-light/60 p-4">
+            <p className="text-xs uppercase tracking-wider text-champagne/70 mb-3 font-medium">
+              Statistiques de la note
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="rounded-xl bg-obsidienne/50 border border-champagne/10 px-3 py-2.5">
+                <p className="text-[11px] text-ivoire/50 mb-0.5">Moyenne</p>
+                <p className="text-lg font-semibold text-champagne tabular-nums">
+                  {stats.moyenne !== null ? stats.moyenne.toFixed(2) : "—"}
+                  <span className="text-xs text-ivoire/40 font-normal ml-1">
+                    /{baremeMax}
+                  </span>
+                </p>
+              </div>
+              <div className="rounded-xl bg-obsidienne/50 border border-champagne/10 px-3 py-2.5">
+                <p className="text-[11px] text-ivoire/50 mb-0.5">Min / Max</p>
+                <p className="text-lg font-semibold text-ivoire tabular-nums">
+                  {stats.min !== null ? stats.min : "—"}
+                  <span className="text-ivoire/40 mx-1">/</span>
+                  {stats.max !== null ? stats.max : "—"}
+                </p>
+              </div>
+              <div className="rounded-xl bg-obsidienne/50 border border-champagne/10 px-3 py-2.5">
+                <p className="text-[11px] text-ivoire/50 mb-0.5">Réussite</p>
+                <p className="text-lg font-semibold text-ivoire tabular-nums">
+                  {stats.reussite !== null ? `${stats.reussite}%` : "—"}
+                </p>
+                <p className="text-[10px] text-ivoire/35 mt-0.5">
+                  ≥ {baremeMax / 2}
+                </p>
+              </div>
+              <div className="rounded-xl bg-obsidienne/50 border border-champagne/10 px-3 py-2.5">
+                <p className="text-[11px] text-ivoire/50 mb-0.5">Absents</p>
+                <p className="text-lg font-semibold text-ivoire tabular-nums">
+                  {stats.absents}
+                  <span className="text-xs text-ivoire/40 font-normal ml-1">
+                    / {totalEleves}
+                  </span>
+                </p>
+              </div>
+            </div>
+            {stats.absents > 0 && (
+              <p className="text-[11px] text-ivoire/40 mt-3">
+                Les absents comptent pour 0 dans la moyenne de la note.
+              </p>
+            )}
           </div>
         )}
 
